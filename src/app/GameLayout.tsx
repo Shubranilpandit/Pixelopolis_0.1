@@ -15,6 +15,7 @@ export const GameLayout: React.FC = () => {
   const setMapDimensions = useGameStore((state) => state.setMapDimensions);
   const setHoveredTile = useGameStore((state) => state.setHoveredTile);
   const setSelectedTile = useGameStore((state) => state.setSelectedTile);
+  const setGridVisible = useGameStore((state) => state.setGridVisible);
   const setCamera = useGameStore((state) => state.setCamera);
 
   useEffect(() => {
@@ -46,8 +47,12 @@ export const GameLayout: React.FC = () => {
         setHoveredTile(coord);
       }),
 
-      eventBus.on('TILE_CLICKED', (coord) => {
-        setSelectedTile(coord);
+      eventBus.on('TILE_SELECTED', (payload) => {
+        setSelectedTile(payload);
+      }),
+
+      eventBus.on('GRID_OVERLAY_TOGGLED', ({ visible }) => {
+        setGridVisible(visible);
       }),
 
       eventBus.on('CAMERA_CHANGED', (cam) => {
@@ -66,7 +71,7 @@ export const GameLayout: React.FC = () => {
       }
       setEngineReady(false);
     };
-  }, [setEngineReady, setActiveScene, setMapDimensions, setHoveredTile, setSelectedTile, setCamera]);
+  }, [setEngineReady, setActiveScene, setMapDimensions, setHoveredTile, setSelectedTile, setGridVisible, setCamera]);
 
   return (
     <div

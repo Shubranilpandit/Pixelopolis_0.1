@@ -4,6 +4,8 @@ import { useGameStore } from '../store/gameStore';
 export const Header: React.FC = () => {
   const isEngineReady = useGameStore((state) => state.isEngineReady);
   const activeScene = useGameStore((state) => state.activeScene);
+  const isGridVisible = useGameStore((state) => state.isGridVisible);
+  const toggleGrid = useGameStore((state) => state.toggleGrid);
 
   return (
     <header
@@ -21,7 +23,7 @@ export const Header: React.FC = () => {
       }}
       className="pixel-panel"
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, pointerEvents: 'auto' }}>
         <div
           style={{
             width: 32,
@@ -52,7 +54,7 @@ export const Header: React.FC = () => {
             >
               Pixelopolis
             </h1>
-            <span className="pixel-badge">Phase 1 Foundation</span>
+            <span className="pixel-badge">Phase 2 Interactive Grid</span>
           </div>
           <p
             style={{
@@ -66,7 +68,21 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, pointerEvents: 'auto' }}>
+        {/* Grid Overlay Toggle Button (Task 2.5) */}
+        <button
+          onClick={toggleGrid}
+          className="btn-pixel"
+          data-testid="btn-toggle-grid"
+          style={{
+            borderColor: isGridVisible ? 'var(--accent-cyan)' : 'var(--border-color)',
+            background: isGridVisible ? 'rgba(56, 189, 248, 0.2)' : 'rgba(35, 42, 60, 0.9)',
+          }}
+          title="Toggle Isometric Grid Overlay (or press G)"
+        >
+          <span>▦ Grid: {isGridVisible ? 'ON' : 'OFF'}</span>
+        </button>
+
         <div
           style={{
             display: 'flex',

@@ -181,4 +181,28 @@ Decisions are formally categorized into:
 
 ---
 
-*This document represents the finalized technical consensus for Phase 0. Changes require formal updates to this registry.*
+## 5. Phase 2 Architecture Decision Records
+
+### ADR-018: Camera Drag vs. Tile Selection Disambiguation
+- **Status:** **[ACCEPTED]**
+- **Context:** Both camera panning and tile selection utilize the left mouse button. Without disambiguation, panning the world triggers unintended tile selection upon releasing the mouse button.
+- **Decision:** Implement a euclidean distance threshold (`MAX_CLICK_DRAG_DISTANCE = 6` pixels). During `pointerdown`, record initial coordinates. On each `pointermove`, compute `dx * dx + dy * dy`. If movement exceeds 36 (6px distance), flag `hasExceededDragThreshold = true`. On `pointerup`, `CameraController.wasDrag()` returns true, suppressing tile selection and preserving the prior active selection.
+- **Consequences:** Eliminates frustrating accidental selections during camera movement. Clicks within the 6px tolerance register reliably as tile selection.
+
+### ADR-019: Dual Coexisting Hover and Selection Visuals
+- **Status:** **[ACCEPTED]**
+- **Context:** The player requires real-time feedback on the tile under the pointer while simultaneously retaining visual confirmation of their currently selected tile and its React HUD inspector details.
+- **Decision:** Implement two decoupled procedural indicators at distinct render depths:
+  1. **Selection Reticle:** Cyan palette (`#00f0ff` border, `#00485c` fill, central white pip `#ffffff`) anchored at `RENDER_LAYERS.SELECTION_OVERLAY` (`2000 + gx + gy`).
+  2. **Hover Highlight:** Green diamond outline (`#4ade80`) anchored at `RENDER_LAYERS.HOVER_OVERLAY` (`2100 + gx + gy`).
+- **Consequences:** Both indicators coexist smoothly. When hovering over the selected tile, the green diamond frames the cyan reticle. Moving away leaves the cyan reticle intact on the selected tile.
+
+### ADR-020: Algorithmic Isometric Grid Overlay
+- **Status:** **[ACCEPTED]**
+- **Context:** Players need a toggleable grid overlay to visualize tile boundaries and island layout without adding texture memory or draw call overhead.
+- **Decision:** Render the grid using a single `Phaser.GameObjects.Graphics` object drawn with 21 diagonal lines along constant `gx` facets and 21 diagonal lines along constant `gy` facets (`#38bdf8` at 35% opacity) at depth `RENDER_LAYERS.GRID_LINES` (`1500`). Toggling visibility is achieved via `.setVisible()` triggered by either the React HUD button or keyboard shortcut ('G').
+- **Consequences:** 1 draw call, 0 additional textures in memory, perfectly aligned with 2:1 isometric diamond boundaries, instant O(1) visibility toggle.
+
+---
+
+*This document represents the finalized technical consensus through Phase 2. Changes require formal updates to this registry.*

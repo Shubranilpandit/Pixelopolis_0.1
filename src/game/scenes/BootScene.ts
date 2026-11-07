@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
-import { ensureGrassTileTexture, ensureTileHoverTexture } from '../graphics/grassTileGenerator';
+import {
+  ensureGrassTileTexture,
+  ensureTileHoverTexture,
+  ensureTileSelectedTexture,
+} from '../graphics/grassTileGenerator';
 import { eventBus } from '../events/GameEventBus';
 
 export class BootScene extends Phaser.Scene {
@@ -11,6 +15,7 @@ export class BootScene extends Phaser.Scene {
     // Generate and cache procedural textures once
     ensureGrassTileTexture(this);
     ensureTileHoverTexture(this);
+    ensureTileSelectedTexture(this);
   }
 
   public create(): void {

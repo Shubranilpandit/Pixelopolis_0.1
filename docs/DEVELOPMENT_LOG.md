@@ -148,11 +148,64 @@
 
 ---
 
+## Phase 1 — Project Foundation and Phaser Integration
+
+**Date:** 2026-11-07
+**Status:** Completed & Verified
+**Milestone Commit:** `8e8233d`
+
+### Objectives Achieved
+- Scaffolding of React 19, TypeScript (strict mode), and Vite 6.
+- Integration of Phaser 3 within React layout (`GameLayout.tsx`) with zero duplicate canvas mounting.
+- Typed event bus (`GameEventBus`) establishing decoupled publish/subscribe between Phaser and React.
+- Initial 20×20 procedurally generated isometric grass island map rendered in back-to-front depth order.
+- Camera controls (drag-to-pan, cursor-anchored zoom 0.5x to 2.0x, 'R' reset).
+- Vitest unit tests (11 tests across coordinate math, event bus, config).
+- Playwright E2E browser tests (smoke and lifecycle verification).
+- Clean production build (`npm run build`).
+
+---
+
+## Phase 2 — Isometric Grid and World Interaction
+
+**Date:** 2026-11-07
+**Status:** Completed & Verified
+
+### Objectives Achieved
+1. **Mathematical Foundation:**
+   - Implemented exact 2:1 isometric coordinate conversions: `gridToScreen`, `screenToGrid`, `pointerToGrid`, `getTileVertices`, `gridToIndex`, and `indexToGrid`.
+   - Verified 400-tile round trip, boundary checks, and mathematical invariants in Vitest suite (`tests/unit/isometric.test.ts`).
+
+2. **Pointer Interaction & Visual Indicators:**
+   - Raycasting on pointer move detects hovered tile and highlights it with a green diamond outline (`#4ade80`).
+   - Distinct click-to-select indicator: procedural cyan reticle (`#00f0ff` border, `#00485c` fill, central white pip `#ffffff`) with layered depth ordering (`RENDER_LAYERS.SELECTION_OVERLAY = 2000`).
+   - Drag-vs-click disambiguation (6px euclidean threshold via `CameraController.wasDrag()`) prevents accidental tile selections during camera panning.
+
+3. **React HUD & Tile Inspector:**
+   - Added interactive Tile Inspector card inside `InfoPanel.tsx` showing Coordinates `(gx, gy)`, Tile ID (`tile_gx_gy`), Linear Array Index, Terrain Type (`Grassland`), Elevation (`0`), and Status (`Buildable • Virgin Soil`).
+   - Included a "Deselect Tile" button (`btn-deselect-tile`) and empty state message (`No tile selected`).
+
+4. **Algorithmic Isometric Grid Overlay:**
+   - Single `Graphics` batch drawing 21 diagonal lines along constant `gx` and 21 diagonal lines along constant `gy` (`#38bdf8` at 35% opacity) at depth `RENDER_LAYERS.GRID_LINES = 1500`.
+   - Toggleable in O(1) via both React HUD button (`▦ Grid: ON/OFF`) and 'G' keyboard shortcut.
+
+5. **Camera & Resize Stability:**
+   - Camera pan and zoom retain active tile selection and hover alignment without drift.
+   - Window resizing automatically recalculates map origin and repositions all tiles and active selection indicators.
+   - Deselection via 'Escape' keyboard shortcut or HUD button.
+
+### Verification & Test Results
+- **Vitest Unit Tests:** 4 test files, 20 tests passed (`isometric.test.ts`, `gameStore.test.ts`, `eventBus.test.ts`, `gameConfig.test.ts`).
+- **Playwright E2E Tests:** 3 suites passed (`final_verification.spec.ts`, `phase2_interaction.spec.ts`, `smoke.spec.ts`).
+- **Production Build:** `npm run build` completed with zero TypeScript errors.
+- **Visual Artifacts:** 8 high-resolution screenshots captured documenting every Phase 2 feature state.
+
+---
+
 ### Next Milestone
 
-**Phase 1 — Project Foundation and Phaser Integration**
-- Initialize Vite + React + TypeScript scaffold.
-- Mount Phaser canvas inside React application layout.
-- Build typed `GameEventBus` bridge.
-- Configure strict TypeScript and pixel-art rendering flags.
-- *Strict Rule: Do not begin Phase 1 without explicit user approval.*
+**Phase 3 — Procedural Graphics Engine**
+- Programmatic pixel-art rendering pipeline for dynamic tile and structure textures.
+- Directional lighting model (upper-left light source, bottom-right shadows).
+- Seeded PRNG for texture micro-variations.
+- *Strict Rule: Do not begin Phase 3 without explicit user approval.*

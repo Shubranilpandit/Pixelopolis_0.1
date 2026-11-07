@@ -70,20 +70,22 @@ flowchart TD
 ---
 
 ### Phase 2 — Isometric Grid and World Interaction
-- **Objective:** Implement 2:1 isometric projection mathematics, camera pan/zoom controls, pointer picking, tile hover highlights, and world boundary constraints.
+- **Objective:** Implement 2:1 isometric projection mathematics, camera pan/zoom controls, pointer picking, tile hover highlights, tile selection, and world boundary constraints.
 - **Scope:**
-  - Pure isometric conversion library (`gridToScreen`, `screenToGrid`).
-  - Camera system: drag-to-pan, mouse-wheel zoom (clamped 0.5x to 2.0x), reset hotkey (`R`), boundary clamping.
-  - Pointer coordinate picking accounting for camera scroll and zoom.
-  - Dynamic tile selection indicator (isometric hover diamond).
+  - Pure isometric conversion library (`gridToScreen`, `screenToGrid`, `pointerToGrid`, `getTileVertices`, `gridToIndex`, `indexToGrid`).
+  - Camera system: drag-to-pan, mouse-wheel cursor-anchored zoom (0.5x to 2.0x), reset hotkey (`R`), drag-vs-click disambiguation (6px threshold).
+  - Pointer coordinate picking accounting for camera scroll and zoom with green hover diamond highlight.
+  - Persistent tile selection reticle (Cyan) with center pip and React Tile Inspector panel.
+  - Algorithmic isometric grid line overlay toggleable via 'G' key and HUD button.
   - Configurable 20×20 grid boundary.
 - **Dependencies:** Phase 1.
-- **Expected Deliverables:** Interactive isometric grid where the player can pan, zoom, hover over tiles, and click to inspect grid coordinates `(gx, gy)`.
+- **Expected Deliverables:** Interactive isometric grid where the player can pan, zoom, hover over tiles, click to select and inspect grid coordinates `(gx, gy)`, and toggle grid overlay.
 - **Acceptance Criteria:**
   - Screen-to-grid raycasting accurately identifies the hovered tile under any camera zoom or pan position.
   - Unit tests verify `gridToScreen` and `screenToGrid` mathematical correctness and round-trip conversion.
-  - Camera panning is bounded strictly within the playable map boundaries.
-- **Technical Risks:** Precision and rounding issues in screen-to-grid picking near tile edges or at non-integer zoom levels.
+  - Selection reticle persists reliably across pan, zoom, and window resizing.
+  - Grid overlay toggles via HUD button and 'G' keyboard shortcut.
+- **Status:** ✅ Complete.
 
 ---
 

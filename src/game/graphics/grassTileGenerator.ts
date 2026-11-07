@@ -7,6 +7,7 @@ export const TEXTURE_KEYS = {
   GRASS_BASE: 'tile_grass_base',
   GRASS_ALT: 'tile_grass_alt',
   TILE_HOVER: 'tile_hover_outline',
+  TILE_SELECTED: 'tile_selected_indicator',
   MAP_BORDER: 'map_border_line',
 } as const;
 
@@ -97,7 +98,8 @@ export function ensureGrassTileTexture(
 }
 
 /**
- * Ensures the tile selection/hover diamond outline texture exists in the TextureManager.
+ * Ensures the tile hover diamond outline texture exists in the TextureManager.
+ * Subtle green translucent tint and 1px neon green outline.
  */
 export function ensureTileHoverTexture(
   scene: Phaser.Scene,
@@ -110,7 +112,7 @@ export function ensureTileHoverTexture(
   const graphics = scene.make.graphics({ x: 0, y: 0 }, false);
 
   // Semitransparent fill
-  graphics.fillStyle(PALETTE.SELECTION_GREEN, 0.25);
+  graphics.fillStyle(PALETTE.SELECTION_GREEN, 0.22);
   graphics.beginPath();
   graphics.moveTo(HALF_TILE_WIDTH, 0);
   graphics.lineTo(TILE_WIDTH, HALF_TILE_HEIGHT);
@@ -120,7 +122,7 @@ export function ensureTileHoverTexture(
   graphics.fillPath();
 
   // Crisp diamond outline
-  graphics.lineStyle(1, PALETTE.SELECTION_GREEN, 0.9);
+  graphics.lineStyle(1, PALETTE.SELECTION_GREEN, 0.85);
   graphics.strokePoints([
     { x: HALF_TILE_WIDTH, y: 0 },
     { x: TILE_WIDTH, y: HALF_TILE_HEIGHT },
@@ -128,6 +130,50 @@ export function ensureTileHoverTexture(
     { x: 0, y: HALF_TILE_HEIGHT },
     { x: HALF_TILE_WIDTH, y: 0 }
   ]);
+
+  graphics.generateTexture(key, TILE_WIDTH, TILE_HEIGHT);
+  graphics.destroy();
+
+  return key;
+}
+
+/**
+ * Ensures the persistent tile selection indicator texture exists in the TextureManager.
+ * Distinct electric cyan outline with semi-transparent cyan fill and central reticle pip.
+ */
+export function ensureTileSelectedTexture(
+  scene: Phaser.Scene,
+  key: string = TEXTURE_KEYS.TILE_SELECTED
+): string {
+  if (scene.textures.exists(key)) {
+    return key;
+  }
+
+  const graphics = scene.make.graphics({ x: 0, y: 0 }, false);
+
+  // Vibrant cyan translucent fill
+  graphics.fillStyle(PALETTE.SELECTION_CYAN, 0.35);
+  graphics.beginPath();
+  graphics.moveTo(HALF_TILE_WIDTH, 0);
+  graphics.lineTo(TILE_WIDTH, HALF_TILE_HEIGHT);
+  graphics.lineTo(HALF_TILE_WIDTH, TILE_HEIGHT);
+  graphics.lineTo(0, HALF_TILE_HEIGHT);
+  graphics.closePath();
+  graphics.fillPath();
+
+  // Double-stroke high-contrast cyan border
+  graphics.lineStyle(2, PALETTE.SELECTION_CYAN, 0.95);
+  graphics.strokePoints([
+    { x: HALF_TILE_WIDTH, y: 1 },
+    { x: TILE_WIDTH - 1, y: HALF_TILE_HEIGHT },
+    { x: HALF_TILE_WIDTH, y: TILE_HEIGHT - 1 },
+    { x: 1, y: HALF_TILE_HEIGHT },
+    { x: HALF_TILE_WIDTH, y: 1 }
+  ]);
+
+  // Center target indicator (white pixel pip)
+  graphics.fillStyle(0xffffff, 0.9);
+  graphics.fillRect(HALF_TILE_WIDTH - 1, HALF_TILE_HEIGHT - 1, 2, 2);
 
   graphics.generateTexture(key, TILE_WIDTH, TILE_HEIGHT);
   graphics.destroy();

@@ -15,11 +15,14 @@ export interface ScreenCoord {
 export type TerrainType = 'grass' | 'dirt' | 'water';
 
 export interface TileData {
+  id: string;
+  index: number;
   gx: number;
   gy: number;
   terrain: TerrainType;
   elevation: number;
   isBuildable: boolean;
+  status: string;
 }
 
 export interface MapDimensions {

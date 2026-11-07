@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
 import { WORLD_CONSTANTS } from '../world/constants';
-import { gridToScreen, screenToGrid, isWithinBounds } from '../world/isometric';
+import { gridToScreen, screenToGrid, isWithinBounds, gridToIndex } from '../world/isometric';
 import { RENDER_LAYERS, getTileDepth } from '../rendering/depth';
 import { TEXTURE_KEYS } from '../graphics/grassTileGenerator';
 import { CameraController } from '../camera/cameraController';
 import { eventBus } from '../events/GameEventBus';
-import { GridCoord } from '../../types/world';
+import { GridCoord, TileData } from '../../types/world';
 
 const { MAP_WIDTH, MAP_HEIGHT, TOTAL_TILES, HALF_TILE_WIDTH, HALF_TILE_HEIGHT } = WORLD_CONSTANTS;
 
@@ -14,11 +14,19 @@ export class CityScene extends Phaser.Scene {
   private originX: number = 0;
   private originY: number = 0;
 
+  // Interaction visual sprites
   private hoverSprite!: Phaser.GameObjects.Sprite;
-  private currentHoveredCoord: GridCoord | null = null;
+  private selectedSprite!: Phaser.GameObjects.Sprite;
   private borderGraphics!: Phaser.GameObjects.Graphics;
+  private gridGraphics!: Phaser.GameObjects.Graphics;
+
+  // State
+  private currentHoveredCoord: GridCoord | null = null;
+  private currentSelectedCoord: GridCoord | null = null;
+  private isGridVisible: boolean = false;
 
   private tileSprites: Phaser.GameObjects.Sprite[] = [];
+  private unsubscribeBusListeners: Array<() => void> = [];
 
   constructor() {
     super({ key: 'CityScene' });
@@ -34,24 +42,38 @@ export class CityScene extends Phaser.Scene {
     // 3. Draw subtle border around buildable 20x20 perimeter
     this.createMapBorder();
 
-    // 4. Create tile hover indicator
-    this.createHoverIndicator();
+    // 4. Create toggleable isometric grid lines overlay
+    this.createGridOverlay();
 
-    // 5. Initialize camera controller centered over the map
+    // 5. Create tile hover indicator & persistent selection indicator
+    this.createInteractionIndicators();
+
+    // 6. Initialize camera controller centered over the map
     this.cameraController = new CameraController(this);
     const mapCenterX = this.originX;
     const mapCenterY = this.originY + (MAP_WIDTH * HALF_TILE_HEIGHT);
     this.cameraController.initialize(mapCenterX, mapCenterY);
 
-    // 6. Setup pointer interactions for tile picking
+    // 7. Setup pointer interactions for hover and click-selection
     this.setupPointerInteractions();
 
-    // 7. Setup viewport resize handling and scene shutdown cleanup
+    // 8. Setup keyboard shortcuts for grid toggle
+    if (this.input.keyboard) {
+      const gKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.G);
+      gKey.on('down', () => {
+        this.setGridVisible(!this.isGridVisible);
+      });
+    }
+
+    // 9. Setup EventBus listeners for UI-triggered actions
+    this.setupEventBusListeners();
+
+    // 9. Setup viewport resize handling and scene shutdown cleanup
     this.scale.on('resize', this.handleResize, this);
     this.events.on('shutdown', this.handleShutdown, this);
     this.events.on('destroy', this.handleShutdown, this);
 
-    // 8. Notify listeners that the scene and map are initialized
+    // 10. Notify listeners that the scene and map are initialized
     eventBus.emit('SCENE_READY', { sceneKey: 'CityScene' });
     eventBus.emit('MAP_INITIALIZED', {
       mapWidth: MAP_WIDTH,
@@ -61,7 +83,6 @@ export class CityScene extends Phaser.Scene {
   }
 
   private updateOrigin(): void {
-    // Center the top vertex of the diamond horizontally in the viewport
     this.originX = this.scale.width / 2;
     this.originY = 120; // Margin from top HUD
   }
@@ -97,16 +118,12 @@ export class CityScene extends Phaser.Scene {
     this.borderGraphics.setDepth(RENDER_LAYERS.TERRAIN_BORDER);
 
     // Four diamond boundary corners:
-    // Top: (0, 0)
     const top = gridToScreen(0, 0, this.originX, this.originY);
-    // Right: (MAP_WIDTH - 1, 0)
     const right = gridToScreen(MAP_WIDTH - 1, 0, this.originX, this.originY);
-    // Bottom: (MAP_WIDTH - 1, MAP_HEIGHT - 1)
     const bottom = gridToScreen(MAP_WIDTH - 1, MAP_HEIGHT - 1, this.originX, this.originY);
-    // Left: (0, MAP_HEIGHT - 1)
     const left = gridToScreen(0, MAP_HEIGHT - 1, this.originX, this.originY);
 
-    this.borderGraphics.lineStyle(2, WORLD_CONSTANTS.PALETTE.GRASS_BORDER, 0.8);
+    this.borderGraphics.lineStyle(2, WORLD_CONSTANTS.PALETTE.GRASS_BORDER, 0.85);
     this.borderGraphics.strokePoints([
       { x: top.sx, y: top.sy - HALF_TILE_HEIGHT },
       { x: right.sx + HALF_TILE_WIDTH, y: right.sy },
@@ -117,21 +134,60 @@ export class CityScene extends Phaser.Scene {
   }
 
   /**
-   * Creates the visual hover highlight indicator.
+   * Renders the toggleable isometric grid overlay across all tile edges.
    */
-  private createHoverIndicator(): void {
-    this.hoverSprite = this.add.sprite(0, 0, TEXTURE_KEYS.TILE_HOVER);
-    this.hoverSprite.setOrigin(0.5, 0.5);
-    this.hoverSprite.setVisible(false);
-    this.hoverSprite.setDepth(RENDER_LAYERS.SELECTION_OVERLAY);
+  private createGridOverlay(): void {
+    if (this.gridGraphics) {
+      this.gridGraphics.destroy();
+    }
+
+    this.gridGraphics = this.add.graphics();
+    this.gridGraphics.setDepth(RENDER_LAYERS.GRID_LINES);
+    this.gridGraphics.setVisible(this.isGridVisible);
+
+    this.gridGraphics.lineStyle(1, WORLD_CONSTANTS.PALETTE.GRID_LINE, 0.35);
+
+    // Draw lines along constant gx (running from top-left to bottom-right facets)
+    for (let gx = 0; gx <= MAP_WIDTH; gx++) {
+      const startX = this.originX + (gx - 0) * HALF_TILE_WIDTH;
+      const startY = this.originY + (gx + 0) * HALF_TILE_HEIGHT - HALF_TILE_HEIGHT;
+      const endX = this.originX + (gx - MAP_HEIGHT) * HALF_TILE_WIDTH;
+      const endY = this.originY + (gx + MAP_HEIGHT) * HALF_TILE_HEIGHT - HALF_TILE_HEIGHT;
+      this.gridGraphics.lineBetween(startX, startY, endX, endY);
+    }
+
+    // Draw lines along constant gy (running from top-right to bottom-left facets)
+    for (let gy = 0; gy <= MAP_HEIGHT; gy++) {
+      const startX = this.originX + (0 - gy) * HALF_TILE_WIDTH;
+      const startY = this.originY + (0 + gy) * HALF_TILE_HEIGHT - HALF_TILE_HEIGHT;
+      const endX = this.originX + (MAP_WIDTH - gy) * HALF_TILE_WIDTH;
+      const endY = this.originY + (MAP_WIDTH + gy) * HALF_TILE_HEIGHT - HALF_TILE_HEIGHT;
+      this.gridGraphics.lineBetween(startX, startY, endX, endY);
+    }
   }
 
   /**
-   * Sets up pointer move/click raycasting into isometric grid coordinates.
+   * Creates the visual hover highlight indicator and persistent selection reticle.
+   */
+  private createInteractionIndicators(): void {
+    // Selection sprite (Cyan)
+    this.selectedSprite = this.add.sprite(0, 0, TEXTURE_KEYS.TILE_SELECTED);
+    this.selectedSprite.setOrigin(0.5, 0.5);
+    this.selectedSprite.setVisible(false);
+    this.selectedSprite.setDepth(RENDER_LAYERS.SELECTION_OVERLAY);
+
+    // Hover sprite (Green)
+    this.hoverSprite = this.add.sprite(0, 0, TEXTURE_KEYS.TILE_HOVER);
+    this.hoverSprite.setOrigin(0.5, 0.5);
+    this.hoverSprite.setVisible(false);
+    this.hoverSprite.setDepth(RENDER_LAYERS.HOVER_OVERLAY);
+  }
+
+  /**
+   * Sets up pointer move (hover raycast) and pointer up (click selection).
    */
   private setupPointerInteractions(): void {
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      // Raycast pointer coordinates into camera world space
       const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
       const coord = screenToGrid(worldPoint.x, worldPoint.y, this.originX, this.originY);
 
@@ -143,7 +199,7 @@ export class CityScene extends Phaser.Scene {
 
           const screenPos = gridToScreen(coord.gx, coord.gy, this.originX, this.originY);
           this.hoverSprite.setPosition(screenPos.sx, screenPos.sy);
-          this.hoverSprite.setDepth(getTileDepth(coord.gx, coord.gy, RENDER_LAYERS.SELECTION_OVERLAY));
+          this.hoverSprite.setDepth(getTileDepth(coord.gx, coord.gy, RENDER_LAYERS.HOVER_OVERLAY));
           this.hoverSprite.setVisible(true);
 
           eventBus.emit('TILE_HOVERED', coord);
@@ -157,11 +213,97 @@ export class CityScene extends Phaser.Scene {
       }
     });
 
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.leftButtonDown() && this.currentHoveredCoord) {
-        eventBus.emit('TILE_CLICKED', this.currentHoveredCoord);
+    // Clear hover indicator if pointer leaves canvas
+    this.input.on('gameout', () => {
+      if (this.currentHoveredCoord !== null) {
+        this.currentHoveredCoord = null;
+        this.hoverSprite.setVisible(false);
+        eventBus.emit('TILE_HOVERED', null);
       }
     });
+
+    // Select tile on pointerup if it was a discrete click (not a camera drag)
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.button === 0 && !this.cameraController.wasDrag()) {
+        const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        const coord = screenToGrid(worldPoint.x, worldPoint.y, this.originX, this.originY);
+
+        if (isWithinBounds(coord.gx, coord.gy)) {
+          this.selectTile(coord);
+          eventBus.emit('TILE_CLICKED', coord);
+        } else {
+          // Clicking outside map clears selection
+          this.selectTile(null);
+        }
+      }
+    });
+  }
+
+  /**
+   * Selects or clears the active tile and emits the payload.
+   */
+  public selectTile(coord: GridCoord | null): void {
+    if (coord && isWithinBounds(coord.gx, coord.gy)) {
+      this.currentSelectedCoord = coord;
+      const screenPos = gridToScreen(coord.gx, coord.gy, this.originX, this.originY);
+      this.selectedSprite.setPosition(screenPos.sx, screenPos.sy);
+      this.selectedSprite.setDepth(getTileDepth(coord.gx, coord.gy, RENDER_LAYERS.SELECTION_OVERLAY));
+      this.selectedSprite.setVisible(true);
+
+      const tileData: TileData = {
+        id: `tile_${coord.gx}_${coord.gy}`,
+        index: gridToIndex(coord.gx, coord.gy),
+        gx: coord.gx,
+        gy: coord.gy,
+        terrain: 'grass',
+        elevation: 0,
+        isBuildable: true,
+        status: 'Buildable • Virgin Soil',
+      };
+
+      eventBus.emit('TILE_SELECTED', {
+        gx: coord.gx,
+        gy: coord.gy,
+        tileData,
+      });
+    } else {
+      this.currentSelectedCoord = null;
+      this.selectedSprite.setVisible(false);
+      eventBus.emit('TILE_SELECTED', null);
+    }
+  }
+
+  /**
+   * Toggles the grid overlay visibility.
+   */
+  public setGridVisible(visible: boolean): void {
+    this.isGridVisible = visible;
+    if (this.gridGraphics) {
+      this.gridGraphics.setVisible(visible);
+    }
+    eventBus.emit('GRID_OVERLAY_TOGGLED', { visible });
+  }
+
+  /**
+   * Subscribes to GameEventBus requests from React UI.
+   */
+  private setupEventBusListeners(): void {
+    const unsubDeselect = eventBus.on('TILE_DESELECT_REQUESTED', () => {
+      this.selectTile(null);
+    });
+
+    const unsubHover = eventBus.on('TILE_HOVERED', (coord) => {
+      if (coord === null && this.currentHoveredCoord !== null) {
+        this.currentHoveredCoord = null;
+        this.hoverSprite.setVisible(false);
+      }
+    });
+
+    const unsubGrid = eventBus.on('SET_GRID_OVERLAY_REQUESTED', ({ visible }) => {
+      this.setGridVisible(visible);
+    });
+
+    this.unsubscribeBusListeners.push(unsubDeselect, unsubHover, unsubGrid);
   }
 
   /**
@@ -183,8 +325,9 @@ export class CityScene extends Phaser.Scene {
       }
     }
 
-    // Redraw map border
+    // Redraw map border & grid overlay
     this.createMapBorder();
+    this.createGridOverlay();
 
     // Reposition hover sprite if active
     if (this.currentHoveredCoord) {
@@ -195,6 +338,17 @@ export class CityScene extends Phaser.Scene {
         this.originY
       );
       this.hoverSprite.setPosition(screenPos.sx, screenPos.sy);
+    }
+
+    // Reposition selected sprite if active
+    if (this.currentSelectedCoord) {
+      const screenPos = gridToScreen(
+        this.currentSelectedCoord.gx,
+        this.currentSelectedCoord.gy,
+        this.originX,
+        this.originY
+      );
+      this.selectedSprite.setPosition(screenPos.sx, screenPos.sy);
     }
 
     // Update camera center reference
@@ -211,5 +365,9 @@ export class CityScene extends Phaser.Scene {
     if (this.cameraController) {
       this.cameraController.destroy();
     }
+    for (const unsub of this.unsubscribeBusListeners) {
+      unsub();
+    }
+    this.unsubscribeBusListeners = [];
   }
 }

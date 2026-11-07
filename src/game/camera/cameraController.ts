@@ -2,19 +2,21 @@ import Phaser from 'phaser';
 import { WORLD_CONSTANTS } from '../world/constants';
 import { eventBus } from '../events/GameEventBus';
 
-const { CAMERA_MIN_ZOOM, CAMERA_MAX_ZOOM, CAMERA_DEFAULT_ZOOM, CAMERA_ZOOM_SPEED } = WORLD_CONSTANTS;
+const { CAMERA_MIN_ZOOM, CAMERA_MAX_ZOOM, CAMERA_DEFAULT_ZOOM, CAMERA_ZOOM_SPEED, MAX_CLICK_DRAG_DISTANCE } = WORLD_CONSTANTS;
 
 /**
  * Manages isometric viewport navigation:
  * - Left-click drag to pan
  * - Wheel scroll to zoom anchored to cursor
  * - 'R' key or event to reset view
+ * - Distinguishes clicks from camera drags
  */
 export class CameraController {
   private scene: Phaser.Scene;
   private camera: Phaser.Cameras.Scene2D.Camera;
 
   private isDragging: boolean = false;
+  private hasExceededDragThreshold: boolean = false;
   private dragStartX: number = 0;
   private dragStartY: number = 0;
   private cameraStartX: number = 0;
@@ -24,6 +26,7 @@ export class CameraController {
   private defaultScrollY: number = 0;
 
   private resetKey?: Phaser.Input.Keyboard.Key;
+  private escapeKey?: Phaser.Input.Keyboard.Key;
   private unsubscribeBus?: () => void;
 
   constructor(scene: Phaser.Scene) {
@@ -51,6 +54,13 @@ export class CameraController {
   }
 
   /**
+   * Returns whether the recent pointer down action exceeded the click threshold into a drag.
+   */
+  public wasDrag(): boolean {
+    return this.hasExceededDragThreshold;
+  }
+
+  /**
    * Sets up drag-to-pan and mouse-wheel zoom handlers.
    */
   private setupPointerControls(): void {
@@ -59,6 +69,7 @@ export class CameraController {
     input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.leftButtonDown()) {
         this.isDragging = true;
+        this.hasExceededDragThreshold = false;
         this.dragStartX = pointer.x;
         this.dragStartY = pointer.y;
         this.cameraStartX = this.camera.scrollX;
@@ -68,6 +79,11 @@ export class CameraController {
 
     input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (this.isDragging) {
+        const dist = Math.hypot(pointer.x - this.dragStartX, pointer.y - this.dragStartY);
+        if (dist > MAX_CLICK_DRAG_DISTANCE) {
+          this.hasExceededDragThreshold = true;
+        }
+
         // Adjust drag sensitivity inversely by zoom level
         const dx = (pointer.x - this.dragStartX) / this.camera.zoom;
         const dy = (pointer.y - this.dragStartY) / this.camera.zoom;
@@ -121,13 +137,18 @@ export class CameraController {
   }
 
   /**
-   * Sets up keyboard shortcuts (e.g., 'R' for reset).
+   * Sets up keyboard shortcuts (e.g., 'R' for reset, 'Escape' for deselect).
    */
   private setupKeyboardControls(): void {
     if (this.scene.input.keyboard) {
       this.resetKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
       this.resetKey.on('down', () => {
         this.resetCamera();
+      });
+
+      this.escapeKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+      this.escapeKey.on('down', () => {
+        eventBus.emit('TILE_DESELECT_REQUESTED');
       });
     }
   }
@@ -173,6 +194,9 @@ export class CameraController {
   public destroy(): void {
     if (this.resetKey) {
       this.resetKey.removeAllListeners();
+    }
+    if (this.escapeKey) {
+      this.escapeKey.removeAllListeners();
     }
     if (this.unsubscribeBus) {
       this.unsubscribeBus();

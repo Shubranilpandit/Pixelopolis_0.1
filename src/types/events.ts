@@ -1,4 +1,4 @@
-import { GridCoord } from './world';
+import { GridCoord, TileData } from './world';
 
 /**
  * Strongly-typed event map for the Pixelopolis GameEventBus.
@@ -14,6 +14,12 @@ export interface GameEventMap {
   'MAP_INITIALIZED': { mapWidth: number; mapHeight: number; totalTiles: number };
   'TILE_HOVERED': GridCoord | null;
   'TILE_CLICKED': GridCoord;
+  'TILE_SELECTED': { gx: number; gy: number; tileData: TileData } | null;
+  'TILE_DESELECT_REQUESTED': void;
+
+  // Grid Overlay Events
+  'GRID_OVERLAY_TOGGLED': { visible: boolean };
+  'SET_GRID_OVERLAY_REQUESTED': { visible: boolean };
 
   // Camera Events
   'CAMERA_CHANGED': { zoom: number; scrollX: number; scrollY: number };

@@ -250,21 +250,17 @@ function gridToScreen(gx: number, gy: number, originX: number, originY: number):
 Translates canvas pointer coordinates `(pointerX, pointerY)` to grid tile indices, taking camera pan and zoom into account:
 ```typescript
 function screenToGrid(
-  pointerX: number,
-  pointerY: number,
-  camera: Phaser.Cameras.Scene2D.Camera,
+  worldX: number,
+  worldY: number,
   originX: number,
   originY: number
 ): { gx: number; gy: number } {
   const TILE_WIDTH = 64;
   const TILE_HEIGHT = 32;
-  
-  // 1. Account for camera scroll and zoom to get world coordinate
-  const worldPoint = camera.getWorldPoint(pointerX, pointerY);
-  const dx = worldPoint.x - originX;
-  const dy = worldPoint.y - originY;
+  const dx = worldX - originX;
+  const dy = worldY - originY;
 
-  // 2. Invert isometric 2:1 matrix
+  // Exact 2:1 isometric transformation inversion
   const gx = Math.floor((dx / (TILE_WIDTH / 2) + dy / (TILE_HEIGHT / 2)) / 2);
   const gy = Math.floor((dy / (TILE_HEIGHT / 2) - dx / (TILE_WIDTH / 2)) / 2);
 
@@ -272,16 +268,62 @@ function screenToGrid(
 }
 ```
 
-### 5.3 Depth Sorting (Occlusion & Z-Index)
-In an isometric perspective, objects closer to the bottom of the screen must render in front of objects further back:
-- **Base Ground Tiles:** Rendered on a flat bottom layer with depth `gx + gy`.
-- **Buildings & Elevated Structures:** Rendered with depth `(gx + footprintWidth - 1) + (gy + footprintHeight - 1) + layerOffset`.
-- Tall buildings will occlude tiles behind their physical footprint naturally because their sprite anchor is anchored at the bottom of their footprint.
+#### Linear Indexing and Diamond Vertices
+For cache-friendly array storage and spatial collision verification:
+```typescript
+// 1D array indexing (Row-Major: gx + gy * MAP_WIDTH)
+function gridToIndex(gx: number, gy: number, mapWidth = 20): number {
+  return gx + gy * mapWidth;
+}
 
-### 5.4 Camera System
-- **Pan:** Drag with left/middle mouse button or edge scrolling with boundary clamping.
-- **Zoom:** Clamped between `0.5x` and `2.0x` using smooth mouse-wheel zooming centered on the pointer.
-- **Boundaries:** Camera movement is restricted to ensure the 20×20 island remains comfortably within viewport bounds.
+function indexToGrid(index: number, mapWidth = 20): { gx: number; gy: number } {
+  return {
+    gx: index % mapWidth,
+    gy: Math.floor(index / mapWidth),
+  };
+}
+
+// 4-point Diamond vertices for exact polygonal testing
+function getTileVertices(gx: number, gy: number, originX: number, originY: number): TileVertices {
+  const { sx, sy } = gridToScreen(gx, gy, originX, originY);
+  return {
+    top: { x: sx, y: sy - HALF_TILE_HEIGHT },
+    right: { x: sx + HALF_TILE_WIDTH, y: sy },
+    bottom: { x: sx, y: sy + HALF_TILE_HEIGHT },
+    left: { x: sx - HALF_TILE_WIDTH, y: sy },
+  };
+}
+```
+
+### 5.3 Depth Sorting & Layer Hierarchy
+In an isometric perspective, objects closer to the bottom of the screen must render in front of objects further back. Pixelopolis employs a strict layered depth indexing formula:
+
+```typescript
+export const RENDER_LAYERS = {
+  BACKGROUND: 0,
+  TERRAIN_BASE: 0,        // Depth: gx + gy
+  TERRAIN_BORDER: 1000,   // Map perimeter border
+  GRID_LINES: 1500,       // Algorithmic grid lines
+  SELECTION_OVERLAY: 2000,// Persistent selected tile reticle: gx + gy + 2000
+  HOVER_OVERLAY: 2100,    // Transient pointer hover highlight: gx + gy + 2100
+  BUILDINGS_BASE: 5000,
+  VEHICLES: 7000,
+  WEATHER: 8000,
+  UI_OVERLAY: 9000,
+};
+
+export function getTileDepth(gx: number, gy: number, layerBase = 0): number {
+  return layerBase + (gx + gy);
+}
+```
+
+### 5.4 Camera Navigation & Interaction Disambiguation
+- **Pan:** Drag with left mouse button with cursor movement tracking.
+- **Drag-vs-Click Disambiguation (6px Threshold):** Panning movements exceeding 6px euclidean distance suppress tile selection on mouse release, preventing accidental tile selection during navigation.
+- **Zoom:** Clamped between `0.5x` and `2.0x` using cursor-anchored scaling (`camera.zoom` around mouse coordinates).
+- **Reset:** Restores default center coordinate and `1.0x` scale on 'R' hotkey or HUD button.
+- **Deselection:** Clears active selection via 'Escape' key or React HUD "Deselect" button.
+- **Grid Overlay:** Algorithmic lines drawn across all tile facet boundaries toggled via 'G' key or React HUD.
 
 ---
 

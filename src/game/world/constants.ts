@@ -21,6 +21,9 @@ export const WORLD_CONSTANTS = {
   CAMERA_ZOOM_SPEED: 0.0015,
   CAMERA_PAN_SMOOTHNESS: 0.1,
 
+  // Click vs Drag detection threshold (pixels)
+  MAX_CLICK_DRAG_DISTANCE: 6,
+
   // Color Palette Tokens (Hex integer & CSS string for procedural generator)
   PALETTE: {
     GRASS_BASE: 0x4d8c3f,
@@ -29,5 +32,8 @@ export const WORLD_CONSTANTS = {
     GRASS_BORDER: 0x2e5425,
     GRID_HIGHLIGHT: 0xffffff,
     SELECTION_GREEN: 0x55ff55,
+    SELECTION_CYAN: 0x38bdf8,
+    SELECTION_CYAN_BORDER: 0x0284c7,
+    GRID_LINE: 0x86efac,
   }
 } as const;

@@ -103,7 +103,7 @@ The development of Pixelopolis is structured across 15 distinct, sequential phas
 | :---: | :--- | :--- | :---: |
 | **0** | **Project Constitution & Workspace Initialization** | Establish documentation, architectural foundations, rules, and repository structure. | ✅ Complete |
 | **1** | **Project Foundation & Phaser Integration** | Build setup (Vite, React, TS, Phaser 3), React-Phaser canvas mounting, lifecycle bridge. | ✅ Complete |
-| **2** | **Isometric Grid & World Interaction** | 2:1 isometric math, camera pan/zoom controls, tile picking, hover cursor, boundaries. | ⬜ Planned |
+| **2** | **Isometric Grid & World Interaction** | 2:1 isometric math, camera pan/zoom controls, tile picking, hover cursor, boundaries. | ✅ Complete |
 | **3** | **Procedural Graphics Engine** | Programmatic pixel-art pipeline, diamond tile rendering, texture caching, lighting models. | ⬜ Planned |
 | **4** | **Terrain & Map Generation** | 20×20 seeded terrain generation, tile types (grass, water, dirt), auto-tiling borders. | ⬜ Planned |
 | **5** | **Building & Construction System** | Building definitions, multi-tile placement preview, footprint validation, construction workflow. | ⬜ Planned |
@@ -142,6 +142,6 @@ npm run build
 
 ## Current Status
 
-- **Active Phase:** Phase 1 — Project Foundation & Phaser Integration.
-- **State:** ✅ Complete. A functional React + Phaser 3 desktop application runs with strict TypeScript, Vite bundling, a 20×20 procedurally textured isometric grass map, camera pan/zoom/reset, raycasted tile hover indicators, a typed GameEventBus, Vitest unit tests, Playwright browser smoke tests, and verified production builds.
-- **Next Milestone:** Phase 2 — Isometric Grid & World Interaction (awaiting explicit user approval).
+- **Active Phase:** Phase 2 — Isometric Grid & World Interaction.
+- **State:** ✅ Complete. Robust 2:1 isometric tile interaction has been established featuring precise raycasting, green hover diamond highlights, cyan click-to-select indicator reticles with coordinate inspection in React HUD, drag-vs-click thresholding (preventing accidental tile selection during camera pan), algorithmic toggleable isometric grid overlay ('G' key and HUD button), Vitest unit test suite (20 tests), Playwright E2E suites (3 tests), and verified production build.
+- **Next Milestone:** Phase 3 — Procedural Graphics Engine (awaiting explicit user approval).

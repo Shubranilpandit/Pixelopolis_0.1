@@ -68,8 +68,8 @@ test.describe('Pixelopolis Phase 1 Final Verification', () => {
     await page.waitForTimeout(200);
 
     // Verify hover coord is recognized
-    const hoverCoordText = await infoPanel.locator('span:has-text("Hover Tile:") + span').textContent();
-    expect(hoverCoordText).not.toBe('—');
+    const hoverLocator = infoPanel.locator('span:has-text("Hover Tile:") + span');
+    await expect(hoverLocator).not.toHaveText('—');
 
     // Screenshot 2: Tile Hover Highlight
     const hoverScreenshotPath = path.join(screenshotsDir, '02_tile_hover.png');
