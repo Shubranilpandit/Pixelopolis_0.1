@@ -355,4 +355,41 @@ Online functionality is **explicitly deferred** until the single-player game loo
 
 ---
 
+## 9. Phase 1 Implementation Specifications
+
+### 9.1 Installed Runtime & Development Dependencies
+- **Runtime:**
+  - `phaser` (^3.88.2): Game engine canvas rendering, scenes, input, cameras.
+  - `react` (^18.3.1) & `react-dom` (^18.3.1): UI framework for HUD and dialogs.
+  - `zustand` (^5.0.3): Reactive UI state management and simulation snapshot store.
+  - `lucide-react` (^0.475.0): Crisp vector icons for UI buttons.
+- **Development & Testing:**
+  - `vite` (^6.1.0) & `@vitejs/plugin-react` (^4.3.4): Build tool and dev server.
+  - `typescript` (^5.7.3): Static typing with strict mode.
+  - `vitest` (^3.0.5): Unit and integration test runner.
+  - `@playwright/test` (^1.50.1): Browser automation and smoke testing.
+  - `happy-dom` (^15.11.7): Lightweight DOM environment for component testing.
+
+### 9.2 Controlled React–Phaser Lifecycle Integration
+The Phaser 3 game instance is managed through `src/game/engine/lifecycle.ts`:
+- `launchGame(container: HTMLElement)`: Destroys any lingering instance, attaches a new `Phaser.Game` instance, and handles React 18 StrictMode double-mounting safely.
+- `destroyGame(game: Phaser.Game | null)`: Calls `game.destroy(true, false)` to cleanly dispose of the WebGL/Canvas context, removes input listeners, and emits `ENGINE_DESTROYED`.
+- The hosting React component (`src/app/GameLayout.tsx`) manages initialization inside `useEffect` and cleans up on unmount.
+
+### 9.3 Typed GameEventBus Pattern
+Located at `src/game/events/GameEventBus.ts`, the bus enforces type-safe pub/sub messaging:
+- `on(event, listener)`: Attaches a typed listener and returns an unsubscribe closure.
+- `off(event, listener)`: Detaches a specific listener.
+- `emit(event, payload)`: Notifies registered listeners with error boundary protection.
+- `clear(event?)`: Resets listeners.
+
+### 9.4 Camera Anchored Zoom & Navigation
+The `CameraController` (`src/game/camera/cameraController.ts`) provides:
+- Left-click drag to pan the viewport smoothly.
+- Mouse wheel zooming with cursor world-position anchoring (keeps the hovered tile fixed during zoom).
+- Clamped zoom limits: `0.55x` minimum to `2.0x` maximum.
+- 'R' keyboard shortcut and React HUD button for instant camera reset.
+
+---
+
 *This architecture document constitutes the structural foundation of Pixelopolis. Any future deviations must be proposed and logged in `docs/TECH_DECISIONS.md`.*

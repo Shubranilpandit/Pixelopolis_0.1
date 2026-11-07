@@ -102,7 +102,7 @@ The development of Pixelopolis is structured across 15 distinct, sequential phas
 | Phase | Milestone | Scope & Deliverable | Status |
 | :---: | :--- | :--- | :---: |
 | **0** | **Project Constitution & Workspace Initialization** | Establish documentation, architectural foundations, rules, and repository structure. | ✅ Complete |
-| **1** | **Project Foundation & Phaser Integration** | Build setup (Vite, React, TS, Phaser 3), React-Phaser canvas mounting, lifecycle bridge. | ⬜ Planned |
+| **1** | **Project Foundation & Phaser Integration** | Build setup (Vite, React, TS, Phaser 3), React-Phaser canvas mounting, lifecycle bridge. | ✅ Complete |
 | **2** | **Isometric Grid & World Interaction** | 2:1 isometric math, camera pan/zoom controls, tile picking, hover cursor, boundaries. | ⬜ Planned |
 | **3** | **Procedural Graphics Engine** | Programmatic pixel-art pipeline, diamond tile rendering, texture caching, lighting models. | ⬜ Planned |
 | **4** | **Terrain & Map Generation** | 20×20 seeded terrain generation, tile types (grass, water, dirt), auto-tiling borders. | ⬜ Planned |
@@ -119,8 +119,29 @@ The development of Pixelopolis is structured across 15 distinct, sequential phas
 
 ---
 
+## Quick Start & Development Scripts
+
+```bash
+# Install dependencies
+npm install
+
+# Start local Vite development server (http://localhost:3000)
+npm run dev
+
+# Run Vitest unit & integration tests
+npm test
+
+# Run Playwright end-to-end browser smoke tests
+npm run test:e2e
+
+# Run production build (type checking + Vite bundling)
+npm run build
+```
+
+---
+
 ## Current Status
 
-- **Active Phase:** Phase 0 — Project Constitution & Initial Workspace Creation.
-- **State:** Documentation foundation fully established. No game code, build artifacts, or dependencies have been installed yet.
-- **Next Milestone:** Phase 1 — Project Foundation & Phaser Integration (to be initiated upon user confirmation).
+- **Active Phase:** Phase 1 — Project Foundation & Phaser Integration.
+- **State:** ✅ Complete. A functional React + Phaser 3 desktop application runs with strict TypeScript, Vite bundling, a 20×20 procedurally textured isometric grass map, camera pan/zoom/reset, raycasted tile hover indicators, a typed GameEventBus, Vitest unit tests, Playwright browser smoke tests, and verified production builds.
+- **Next Milestone:** Phase 2 — Isometric Grid & World Interaction (awaiting explicit user approval).

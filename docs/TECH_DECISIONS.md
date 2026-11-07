@@ -133,6 +133,21 @@ Decisions are formally categorized into:
 - **Decision:** All building parameters, construction costs, production cycles, and upgrade requirements must be externalized into static data configurations (`src/data/`).
 - **Rationale:** Enables balancing tweaks without modifying engine code or simulation logic.
 
+### ADR-015: Controlled React–Phaser Lifecycle Bridge
+- **Classification:** **[CONFIRMED]**
+- **Decision:** Phaser initializes strictly within React's `useEffect` lifecycle via `launchGame()`, and teardown is guaranteed by `destroyGame()`.
+- **Rationale:** In React 18+ StrictMode, components mount, unmount, and remount in development. Managing an explicit singleton reference prevents duplicate canvas creation, WebGL context loss, and memory leaks.
+
+### ADR-016: Zero-Dependency Typed GameEventBus Singleton
+- **Classification:** **[CONFIRMED]**
+- **Decision:** A custom, strongly-typed `GameEventBus` class replaces third-party event emitter packages.
+- **Rationale:** Guarantees compile-time type verification for all event keys and payloads (`GameEventMap`) across React, Phaser, and the Game Domain while adding 0 KB of dependency weight.
+
+### ADR-017: Cursor-Anchored Isometric Camera Zoom & Viewport Navigation
+- **Classification:** **[CONFIRMED]**
+- **Decision:** Viewport zoom recalculates world positions before and after zooming to anchor the zoom center directly to the pointer's world coordinates.
+- **Rationale:** Prevents disorienting viewport jumps when zooming, providing intuitive and smooth desktop navigation. Min/max zoom is clamped between 0.55x and 2.0x.
+
 ---
 
 ## 3. Recommendations for Subsequent Phases

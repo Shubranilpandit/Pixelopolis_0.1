@@ -1,0 +1,91 @@
+/* Pixelopolis Theme Styles */
+
+:root {
+  --bg-dark: #12141c;
+  --bg-panel: rgba(22, 25, 36, 0.88);
+  --bg-panel-hover: rgba(30, 35, 50, 0.95);
+  --border-color: rgba(95, 168, 78, 0.4);
+  --border-accent: #5fa84e;
+  --text-main: #f0f4f8;
+  --text-muted: #94a3b8;
+  --accent-gold: #f59e0b;
+  --accent-green: #4ade80;
+  --accent-cyan: #38bdf8;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: var(--font-family);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pixel-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  border-radius: 6px;
+  color: var(--text-main);
+}
+
+.pixel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 4px;
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.btn-pixel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(35, 42, 60, 0.9);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-pixel:hover {
+  background: rgba(45, 55, 78, 1);
+  border-color: var(--border-accent);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btn-pixel:active {
+  transform: translateY(0);
+}
