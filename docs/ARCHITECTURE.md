@@ -434,4 +434,51 @@ The `CameraController` (`src/game/camera/cameraController.ts`) provides:
 
 ---
 
+## 10. Performance Architecture & Hardware Strategy
+
+### 10.1 Strategic Posture: Balanced Performance
+Pixelopolis officially designates its architectural performance stance as:
+
+> **Performance Priority: BALANCED**
+> Ensure accessible, reliable execution on entry-level / low-end hardware while enabling rich visual depth, extended rendering distances, and fluid 60 FPS performance on recommended and high-end systems.
+
+### 10.2 Provisional Hardware Compatibility Targets
+These metrics serve as provisional design guidelines rather than hard guarantees. Real-world validation requires physical benchmarking on representative systems:
+
+| Profile | Hardware Target | Performance Target | Target Graphics Mode |
+| :--- | :--- | :--- | :--- |
+| **Minimum** | **2 GB** System RAM | **30 FPS** | Low Preset |
+| **Recommended** | **4 GB** System RAM | **60 FPS** | Medium Preset |
+| **Comfortable** | **8 GB or more** | **60+ FPS** | High Preset (Extended effects & draw distance) |
+
+*Environmental Variables:* Real-world performance is strongly influenced by operating system background memory, browser architecture (Chromium/Gecko/WebKit), GPU/iGPU driver capabilities, available unallocated RAM, and concurrent browser tabs/software.
+
+### 10.3 Mandatory Engineering Principles
+Every architectural module and subsequent development phase must implement:
+
+1. **Memory-Efficient Asset Generation:** Procedural drawing operations must avoid creating unneeded offscreen `<canvas>` allocations. Intermediate drawing contexts are discarded or pooled.
+2. **Texture Caching and Reuse:** All procedural assets are registered once with Phaser's `TextureManager` and retrieved by key. Drawing code queries `this.textures.exists(key)` before generating.
+3. **Chunk-Based Spatial Partitioning:** World grids expanding beyond the initial 20×20 island are partitioned into discrete render chunks to allow frustum culling and localized updates.
+4. **Object Pooling:** High-frequency transient objects (placement ghost previews, particle effects, UI notifications, interaction reticles) utilize reusable object pools to eliminate GC pauses.
+5. **Decoupled Simulation Scheduling:** Headless domain ticks (e.g. 1.0s economic or service cycles) execute independently of the 60 FPS Phaser render loop, with background tab throttling.
+6. **Optimized React Rendering:** React UI components must be aggressively memoized (`React.memo`, selective Zustand selectors) so high-frequency cursor hover or camera position updates do not trigger unnecessary React component tree reconciliation.
+7. **Adaptive Graphics Quality Pipeline:** Visual fidelity automatically or manually scales across Low, Medium, and High presets without degrading the core pixel-art identity.
+8. **Proactive Resource Cleanup:** Lifecycle management rigorously releases WebGL textures, canvas contexts, and pub/sub event listeners upon scene changes or unmount.
+9. **Leak Prevention:** State stores and scene graphs enforce zero unbounded memory accumulation over sustained play sessions.
+10. **Continuous Regression Profiling:** Automated Vitest and Playwright CI runs monitor frame-time variance, memory heap allocations, and bundle sizes.
+
+### 10.4 Scalable Graphics Presets
+- **Low Preset:** Prioritizes absolute compatibility and stable 30 FPS. Disables optional ambient particles, simplifies tile edge blending, and reduces decorative density while keeping the core pixel-art crisp and intact.
+- **Medium Preset:** Standard baseline balancing crisp visual quality, ambient citizen/vehicle animations, and consistent 60 FPS.
+- **High Preset:** Unlocks full particle systems, cloud shadows, decorative foliage, maximum draw distances, and enhanced lighting transitions.
+
+### 10.5 Empirical Telemetry & Progressive Budgets
+The architecture rejects arbitrary, unmeasured hard memory caps. Instead, progressive performance budgets are derived empirically by measuring:
+- Browser-tab memory and JavaScript heap size (distinguishing browser baseline from Pixelopolis incremental usage).
+- WebGL texture memory and active draw calls.
+- Frame-rate stability and 1% low frame-time metrics.
+- Loading times across scaling city densities.
+
+---
+
 *This architecture document constitutes the structural foundation of Pixelopolis. Any future deviations must be proposed and logged in `docs/TECH_DECISIONS.md`.*

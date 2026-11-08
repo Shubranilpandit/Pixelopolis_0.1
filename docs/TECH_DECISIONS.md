@@ -203,6 +203,23 @@ Decisions are formally categorized into:
 - **Decision:** Render the grid using a single `Phaser.GameObjects.Graphics` object drawn with 21 diagonal lines along constant `gx` facets and 21 diagonal lines along constant `gy` facets (`#38bdf8` at 35% opacity) at depth `RENDER_LAYERS.GRID_LINES` (`1500`). Toggling visibility is achieved via `.setVisible()` triggered by either the React HUD button or keyboard shortcut ('G').
 - **Consequences:** 1 draw call, 0 additional textures in memory, perfectly aligned with 2:1 isometric diamond boundaries, instant O(1) visibility toggle.
 
+### ADR-021: Balanced Performance Priority and Provisional Hardware Policy
+- **Status:** **[ACCEPTED]**
+- **Context:**
+  As an ambitious browser-based city-building simulation, Pixelopolis faces the challenge of scaling visual complexity, procedural textures, and simulation depth across a broad spectrum of hardware. Web users expect instant loading and smooth playability on entry-level laptops (e.g. 2 GB RAM machines), while players on recommended and enthusiast desktops (4 GB – 8 GB+ RAM) expect rich visual fidelity, fluid 60 FPS rendering, and extended draw distances.
+- **Decision:**
+  Formally establish **Performance Priority: BALANCED** as a core project constitutional principle:
+  1. **Provisional Hardware Targets:**
+     - *Minimum:* 2 GB system RAM, targeting 30 FPS under a Low graphics preset.
+     - *Recommended:* 4 GB system RAM, targeting 60 FPS under a Medium graphics preset.
+     - *Comfortable:* 8 GB or more, targeting 60+ FPS with enhanced visual quality, atmospheric effects, and extended draw distances under a High graphics preset.
+     - *Provisional Status:* These values represent design targets rather than verified hardware requirements. Actual compatibility will be established through empirical benchmarking on representative physical devices, recognizing that OS overhead, browser process models, GPU/iGPU driver capabilities, and concurrent software heavily impact available memory.
+  2. **Mandatory Engineering Principles:** All subsequent phases must adopt 10 performance principles: memory-efficient asset generation, texture caching and reuse, chunk-based rendering, object pooling, decoupled simulation scheduling, optimized/memoized React rendering, adaptive graphics quality, proactive resource cleanup, leak prevention, and continuous performance regression testing.
+  3. **Scalable Graphics Presets:** Design three distinct presets (Low, Medium, High) ensuring that the core pixel-art identity remains crisp and intact even on the Low preset.
+  4. **Empirical Telemetry & Progressive Budgets:** Track JS heap, tab memory, GPU memory, FPS, frame-time variance, initial load time, and draw calls. Reject arbitrary hard memory limits without profiling; establish measured budgets progressively as city density scales.
+- **Consequences:**
+  Every development phase (Phases 3–14) must adhere to these 10 principles during design and implementation. Prevents performance degradation on entry-level hardware while ensuring high-end systems benefit from enhanced visual depth.
+
 ---
 
 *This document represents the finalized technical consensus through Phase 2. Changes require formal updates to this registry.*

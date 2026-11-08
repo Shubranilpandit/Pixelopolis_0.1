@@ -90,28 +90,30 @@ flowchart TD
 ---
 
 ### Phase 3 — Procedural Graphics Engine
-- **Objective:** Build the programmatic pixel-art rendering pipeline to generate tiles, structures, and decorations entirely through code, with texture caching.
+- **Objective:** Build the programmatic pixel-art rendering pipeline to generate tiles, structures, and decorations entirely through code, with texture caching and strict adherence to the Balanced Performance Policy.
 - **Scope:**
   - Procedural diamond tile drawing utilities with lighting (upper-left light source, lower-right shadows).
   - Seeded pseudo-random number generator (PRNG) for procedural texture variation.
   - Phaser `TextureManager` caching pipeline to generate textures once and reuse them by key.
+  - Memory-efficient asset generation: discard intermediate temporary canvas contexts to prevent GC pauses.
   - Edge dithering, highlights, and shadow algorithms.
 - **Dependencies:** Phase 2.
 - **Expected Deliverables:** Modular procedural texture generator module (`src/game/graphics/`) capable of producing grass, dirt, water, and building tiles on demand.
 - **Acceptance Criteria:**
   - Textures generate cleanly with pixel-art aesthetics (nearest-neighbor scaling, no blur).
   - `this.textures.exists(key)` prevents duplicate texture generation.
-  - Frame rate remains at a solid 60 FPS without memory leaks.
+  - Frame rate remains at a solid 60 FPS without memory leaks or garbage collection spikes.
 - **Technical Risks:** Excessive canvas allocation during generation causing garbage collection pauses.
 
 ---
 
 ### Phase 4 — Terrain and Map Generation
-- **Objective:** Generate a deterministic 20×20 isometric island map featuring diverse terrain types, elevation, and natural boundaries.
+- **Objective:** Generate a deterministic 20×20 isometric island map featuring diverse terrain types, elevation, natural boundaries, and chunk-readiness for future world expansion.
 - **Scope:**
   - Seeded terrain generator producing grass, dirt, sand, and water tiles.
   - Auto-tiling transitions for shorelines and terrain borders.
-  - Spatial grid data structure storing tile properties (type, elevation, buildable flag).
+  - Spatial grid data structure storing tile properties (type, elevation, buildable flag) with compact memory footprint.
+  - Architectural readiness for chunk-based spatial partitioning when expanding beyond 20×20.
   - Map border aesthetics defining the edge of the playable world.
 - **Dependencies:** Phase 3.
 - **Expected Deliverables:** Deterministic 20×20 isometric landscape rendered on screen with distinct terrain biomes and shore transitions.
@@ -124,11 +126,11 @@ flowchart TD
 ---
 
 ### Phase 5 — Building and Construction System
-- **Objective:** Implement data-driven building placement, multi-tile footprint validation, placement previews, and construction workflows.
+- **Objective:** Implement data-driven building placement, multi-tile footprint validation, placement previews, and construction workflows with object pooling.
 - **Scope:**
   - Data-driven building catalog (`src/data/buildings/`) defining footprints (1×1, 2×2, 2×3), costs, and categories.
   - React construction menu with category tabs (Residential, Commercial, Industrial).
-  - Interactive ghost placement preview in Phaser (green for valid, red for invalid).
+  - Interactive ghost placement preview in Phaser (green for valid, red for invalid) using object pooling to eliminate allocations on pointer move.
   - Footprint validation: within map bounds, tiles are buildable, no overlapping structures.
   - Multi-tile depth sorting and building sprite anchoring.
   - Building demolition tool with resource refund logic.
@@ -233,17 +235,20 @@ flowchart TD
 ---
 
 ### Phase 11 — Game UI and UX Polish
-- **Objective:** Elevate visual quality, player feedback, audio cues, responsive design, and interface ergonomics across all screen sizes.
+- **Objective:** Elevate visual quality, player feedback, audio cues, responsive design, interface ergonomics, and performance controls across all screen sizes.
 - **Scope:**
   - High-fidelity React HUD theme with pixel-art borders, custom typography, and micro-interactions.
   - Contextual building inspector panel (demolish, upgrade, stats, service status).
+  - Scalable Graphics Presets UI: Settings modal allowing players to select between Low, Medium, and High graphics presets.
+  - React performance optimization: Selective Zustand selectors and component memoization (`React.memo`) to eliminate wasteful re-renders.
   - Synthesized sound effects (Web Audio API / Phaser Sound) for clicks, construction, errors, and ambient city buzz.
   - Keyboard shortcuts (Escape to cancel, numbers to select tools, WASD/arrows to pan).
   - Animated notification toasts for level-ups, production completions, and warnings.
 - **Dependencies:** Phase 10.
-- **Expected Deliverables:** Polished, responsive, and tactile interface with audio feedback and intuitive inspection controls.
+- **Expected Deliverables:** Polished, responsive, and tactile interface with audio feedback, graphics settings controls, and intuitive inspection.
 - **Acceptance Criteria:**
   - All interactive elements produce distinct audio/visual feedback.
+  - Graphics presets switch cleanly at runtime without requiring page reloads.
   - UI scales cleanly across standard desktop browser viewports (1280×720 to 4K).
   - Zero input blocking between React dialogs and Phaser canvas.
 - **Technical Risks:** Audio autoplay policy restrictions in modern browsers requiring deferred audio context initialization.
@@ -288,17 +293,20 @@ flowchart TD
 ---
 
 ### Phase 14 — Testing, Optimization and Deployment
-- **Objective:** Perform comprehensive performance optimization, complete automated test suites (Vitest + Playwright), and establish production deployment pipelines.
+- **Objective:** Perform comprehensive performance optimization, complete automated test suites (Vitest + Playwright), and establish empirical benchmarking against the Balanced Performance targets.
 - **Scope:**
+  - Empirical benchmarking across provisional hardware targets: 2 GB RAM (Low @ 30 FPS), 4 GB RAM (Medium @ 60 FPS), and 8 GB+ (High @ 60+ FPS).
+  - Telemetry tracking: JS heap memory, tab memory, GPU memory, 1% low frame-time metrics, and draw calls across scaling city sizes.
   - Rendering performance profiling: sprite batching, offscreen culling, memory leak audits.
   - Automated test coverage: 90%+ unit test coverage on domain logic with Vitest.
   - Playwright E2E test suite covering critical user journeys (new game, build road, place house, level up, save, reload).
   - Production Vite build optimization, asset compression, and bundle size reduction (<1.5MB initial payload target).
   - Deployment configuration (static web hosting on Vercel/Netlify/GitHub Pages).
 - **Dependencies:** Phase 12.
-- **Expected Deliverables:** High-performance, production-ready build with automated CI testing passing reliably.
+- **Expected Deliverables:** High-performance, production-ready build validated with empirical performance telemetry and automated CI tests.
 - **Acceptance Criteria:**
-  - Solid 60 FPS performance maintained with 200+ active on-screen sprites.
+  - Minimum 30 FPS maintained on low-end hardware profile in Low graphics mode.
+  - Solid 60 FPS performance maintained on recommended profile with 200+ active on-screen sprites.
   - All unit, integration, and E2E tests pass cleanly in automated CI runs.
   - Production build produces zero bundling warnings and validates on Chrome, Firefox, Safari, and Edge.
 - **Technical Risks:** Browser-specific WebGL quirks or memory leaks under sustained playtime.
@@ -310,8 +318,8 @@ flowchart TD
 | Phase | Milestone Name | Dependencies | Status |
 | :---: | :--- | :--- | :---: |
 | **0** | Project Constitution and Workspace Initialization | None | ✅ **Complete** |
-| **1** | Project Foundation and Phaser Integration | Phase 0 | ⬜ Planned |
-| **2** | Isometric Grid and World Interaction | Phase 1 | ⬜ Planned |
+| **1** | Project Foundation and Phaser Integration | Phase 0 | ✅ **Complete** |
+| **2** | Isometric Grid and World Interaction | Phase 1 | ✅ **Complete** |
 | **3** | Procedural Graphics Engine | Phase 2 | ⬜ Planned |
 | **4** | Terrain and Map Generation | Phase 3 | ⬜ Planned |
 | **5** | Building and Construction System | Phase 4 | ⬜ Planned |

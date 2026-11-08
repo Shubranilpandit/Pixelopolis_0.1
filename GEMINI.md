@@ -70,7 +70,7 @@ These 15 principles form the permanent constitution of Pixelopolis. Every contri
 9. **Avoid Circular Dependencies:** Structure dependency graphs hierarchically. Never allow bidirectional or cyclic imports.
 10. **Implement Appropriate Error Handling:** Validate inputs, guard against corrupt save data, and handle exceptions gracefully with actionable diagnostics.
 11. **Maintain Deterministic Procedural Generation:** Use seeded pseudo-random number generators (PRNG) to ensure world and texture generation is reproducible.
-12. **Optimize Graphics Rendering and Memory Usage:** Generate procedural textures once, cache them in Phaser's TextureManager, reuse sprites, and eliminate per-frame allocations.
+12. **Optimize Graphics Rendering and Memory Usage (Balanced Performance):** Generate procedural textures once, cache them in Phaser's TextureManager, reuse sprites, utilize object pooling where beneficial, eliminate per-frame allocations, and adhere strictly to the Balanced Performance Priority.
 13. **Preserve Existing Functionality:** New features or refactors must never break or silently drop existing working capabilities.
 14. **Document Significant Architectural Decisions:** Record architectural decisions, tradeoffs, and structural changes in `docs/TECH_DECISIONS.md`.
 15. **Avoid Unnecessary Rewrites:** Enhance and extend existing modules incrementally; never discard working code without explicit architectural justification and user approval.
@@ -240,7 +240,52 @@ Pixelopolis leverages programmatic pixel art to generate clean, lightweight, and
 
 ---
 
-## 8. Antigravity Development Rules
+## 8. Official Hardware and Performance Policy
+
+Pixelopolis enforces a constitutional project decision:
+
+> **Performance Priority: BALANCED**
+> Pixelopolis aims to support low-end computers while preserving good visual quality and gameplay responsiveness on recommended and high-end hardware.
+
+### 8.1 Provisional Hardware Targets
+These are design targets, not verified hardware requirements. Actual compatibility must be established through empirical benchmarking on representative physical systems:
+
+| Profile | System RAM Target | Performance Target | Target Graphics Preset |
+| :--- | :--- | :--- | :--- |
+| **Minimum** | **2 GB** System RAM | **30 FPS** | Low Preset |
+| **Recommended** | **4 GB** System RAM | **60 FPS** | Medium Preset |
+| **Comfortable** | **8 GB or more** | **60+ FPS** (enhanced effects & distance) | High Preset |
+
+*Environmental Context:* Operating system overhead, browser architecture, GPU capabilities, available free RAM, and concurrent background applications substantially affect whether the game can run within these thresholds.
+
+### 8.2 Mandatory Engineering Principles
+All development phases must incorporate these 10 performance principles:
+1. **Memory-efficient asset generation:** Avoid redundant canvas allocations during procedural sprite synthesis.
+2. **Texture caching and reuse:** Never duplicate textures; check `textures.exists(key)` before drawing.
+3. **Chunk-based rendering for large worlds:** Partition larger world grids into render chunks with off-screen culling.
+4. **Object pooling where beneficial:** Recycle transient display objects, selection indicators, and particles.
+5. **Efficient simulation scheduling:** Decouple rendering ticks from simulation ticks; throttle background calculations.
+6. **Reduced unnecessary React rendering:** Memoize pure UI components and prevent wasteful re-renders from high-frequency game ticks.
+7. **Adaptive graphics quality:** Dynamically or manually throttle decorative visual effects based on target presets.
+8. **Efficient cleanup of unused resources:** Cleanly destroy scenes, textures, and event listeners upon unmount/shutdown.
+9. **Prevention of memory leaks:** Maintain zero unbounded array growth, detached DOM references, or lingering event listeners.
+10. **Continuous performance regression testing:** Audit frame-times, heap allocations, and bundle sizes in CI/test suites.
+
+### 8.3 Graphics Presets
+The game architecture accommodates three scalable graphics presets without compromising game identity:
+- **Low:** Prioritizes compatibility and stable 30 FPS performance on entry-level machines. *(Note: Must not unnecessarily degrade the core pixel-art visual identity).*
+- **Medium:** Balanced visual fidelity, ambient details, and steady 60 FPS performance.
+- **High:** Enhanced particle effects, ambient decorations, extended rendering view distances, and smooth animations.
+
+### 8.4 Empirical Performance Measurement
+Performance budgets must be established progressively through profiling rather than arbitrary hard limits:
+- **Measurable Metrics:** Track system RAM and browser-tab memory where measurable, JavaScript heap usage, GPU memory where measurable, average FPS, frame-time consistency, initial loading time, texture memory, and object count.
+- **Process Memory Distinction:** Distinguish browser-process baseline memory from the incremental memory directly attributable to Pixelopolis.
+- **Progressive Budgeting:** Establish measured budgets progressively and revise them when empirical evidence supports a change.
+
+---
+
+## 9. Antigravity Development Rules
 
 These behavioral instructions must guide every development step:
 
@@ -275,30 +320,30 @@ These behavioral instructions must guide every development step:
 
 ---
 
-## 9. Development Roadmap Overview
+## 10. Development Roadmap Overview
 
-| Phase | Milestone Name | Primary Focus |
-| :---: | :--- | :--- |
-| **0** | **Project Constitution & Workspace Initialization** | Establish documentation, architectural foundations, rules, and repository structure. *(Current Phase)* |
-| **1** | **Project Foundation & Phaser Integration** | Build setup (Vite, React, TS, Phaser 3), React-Phaser canvas mounting, lifecycle bridge. |
-| **2** | **Isometric Grid & World Interaction** | 2:1 isometric math, camera pan/zoom controls, tile picking, hover cursor, boundaries. |
-| **3** | **Procedural Graphics Engine** | Programmatic pixel-art pipeline, diamond tile rendering, texture caching, lighting models. |
-| **4** | **Terrain & Map Generation** | 20×20 seeded terrain generation, tile types (grass, water, dirt), auto-tiling borders. |
-| **5** | **Building & Construction System** | Building definitions, multi-tile placement preview, footprint validation, construction workflow. |
-| **6** | **Road & Connectivity System** | Road placement, auto-connecting isometric road segments, network connectivity graph. |
-| **7** | **Economy & Resource Management** | Currency (coins), material production cycles, storage caps, resource deduction rules. |
-| **8** | **Population Simulation** | Residential capacity, citizen happiness calculations, service demands, population growth. |
-| **9** | **Public Services & Infrastructure** | Power, water, fire, police, health coverage radii, service deficit penalties. |
-| **10** | **Progression, Missions & Achievements** | City level, XP curves, unlock trees, objective tracker, milestone rewards. |
-| **11** | **Game UI & UX Polish** | React HUD polish, audio integration hooks, notifications, inspection dialogs, responsiveness. |
-| **12** | **Local Persistence & Save/Load** | IndexedDB storage, multiple save slots, auto-save, schema migrations, export/import. |
-| **13** | **Online Infrastructure & Multiplayer** | *(Deferred)* Cloud saves, leaderboards, cross-city trading, Supabase backend. |
-| **14** | **Testing, Optimization & Deployment** | Performance profiling, sprite batching, Playwright E2E suites, production deployment. |
+| Phase | Milestone Name | Primary Focus | Status |
+| :---: | :--- | :--- | :---: |
+| **0** | **Project Constitution & Workspace Initialization** | Establish documentation, architectural foundations, rules, and repository structure. | ✅ Complete |
+| **1** | **Project Foundation & Phaser Integration** | Build setup (Vite, React, TS, Phaser 3), React-Phaser canvas mounting, lifecycle bridge. | ✅ Complete |
+| **2** | **Isometric Grid & World Interaction** | 2:1 isometric math, camera pan/zoom controls, tile picking, hover cursor, boundaries. | ✅ Complete |
+| **3** | **Procedural Graphics Engine** | Programmatic pixel-art pipeline, diamond tile rendering, texture caching, lighting models. | ⬜ Planned |
+| **4** | **Terrain & Map Generation** | 20×20 seeded terrain generation, tile types (grass, water, dirt), auto-tiling borders. | ⬜ Planned |
+| **5** | **Building & Construction System** | Building definitions, multi-tile placement preview, footprint validation, construction workflow. | ⬜ Planned |
+| **6** | **Road & Connectivity System** | Road placement, auto-connecting isometric road segments, network connectivity graph. | ⬜ Planned |
+| **7** | **Economy & Resource Management** | Currency (coins), material production cycles, storage caps, resource deduction rules. | ⬜ Planned |
+| **8** | **Population Simulation** | Residential capacity, citizen happiness calculations, service demands, population growth. | ⬜ Planned |
+| **9** | **Public Services & Infrastructure** | Power, water, fire, police, health coverage radii, service deficit penalties. | ⬜ Planned |
+| **10** | **Progression, Missions & Achievements** | City level, XP curves, unlock trees, objective tracker, milestone rewards. | ⬜ Planned |
+| **11** | **Game UI & UX Polish** | React HUD polish, audio integration hooks, notifications, inspection dialogs, responsiveness. | ⬜ Planned |
+| **12** | **Local Persistence & Save/Load** | IndexedDB storage, multiple save slots, auto-save, schema migrations, export/import. | ⬜ Planned |
+| **13** | **Online Infrastructure & Multiplayer** | *(Deferred)* Cloud saves, leaderboards, cross-city trading, Supabase backend. | ⏳ Deferred |
+| **14** | **Testing, Optimization & Deployment** | Performance profiling, sprite batching, Playwright E2E suites, production deployment. | ⬜ Planned |
 
 ---
 
-## 10. Phase 0 Status & Verification
+## 11. Current Project Status & Active Baseline
 
-- **Current Status:** Phase 0 (Constitution & Documentation) Complete.
-- **Codebase State:** Documentation only. No game source code, npm dependencies, or build artifacts created.
-- **Next Phase:** Phase 1 (Project Foundation & Phaser Integration) — awaiting explicit user command.
+- **Current Status:** Phase 2 (Isometric Grid & World Interaction) Complete.
+- **Git Milestone:** `bbd28d2` on `main` (synchronized with `origin/main`).
+- **Next Phase:** Phase 3 (Procedural Graphics Engine) — awaiting explicit user approval.

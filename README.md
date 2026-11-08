@@ -60,10 +60,46 @@ Pixelopolis is built upon 15 core architectural principles:
 9. **No Circular Dependencies:** Clean directional DAG imports.
 10. **Robust Error Handling:** Defensive validation on inputs, actions, and persistence data.
 11. **Deterministic Procedural Generation:** Seed-based PRNG ensures consistent terrain and visual output.
-12. **Optimized Graphics & Memory:** Procedural textures are drawn once, cached in Phaser's `TextureManager`, and reused across instances.
+12. **Optimized Graphics & Memory:** Procedural textures are drawn once, cached in Phaser's `TextureManager`, and reused across instances with object pooling where beneficial.
 13. **Preserve Working Functionality:** Every incremental phase preserves and validates all prior features.
 14. **Documented Decisions:** Major design choices recorded via Architecture Decision Records (`docs/TECH_DECISIONS.md`).
 15. **Avoid Unnecessary Rewrites:** Evolution over revolution; improve and extend existing foundations.
+
+---
+
+## Hardware Targets & Performance Policy
+
+Pixelopolis commits to a foundational project posture:
+
+> **Performance Priority: BALANCED**
+> The game is engineered to accommodate low-end computer hardware while offering rich visuals and responsive 60 FPS gameplay on recommended and high-end systems.
+
+### Provisional Hardware Targets
+*These specifications represent design targets rather than verified hardware requirements. Actual compatibility will be established progressively via real-world benchmarking on representative hardware.*
+
+| Specification | Minimum Target | Recommended Target | Comfortable Target |
+| :--- | :--- | :--- | :--- |
+| **System RAM** | **2 GB** System RAM | **4 GB** System RAM | **8 GB or more** |
+| **Target Frame Rate** | **30 FPS** (Low preset) | **60 FPS** (Medium preset) | **60+ FPS** (High preset) |
+| **Graphics Settings** | Low Preset | Medium Preset | High Preset |
+| **Target Experience** | Smooth, accessible city simulation | Fluid 60 FPS with full ambient animations | Enhanced particle effects & draw distance |
+
+*Environmental Caveat:* Operating system footprint, browser tab overhead, GPU performance, available free RAM, and background software directly affect whether the application operates comfortably within these thresholds.
+
+### Mandatory Engineering Principles
+1. **Memory-efficient asset generation:** Avoid excess canvas allocations when procedurally synthesizing sprites.
+2. **Texture caching and reuse:** Commit procedural textures to Phaser's `TextureManager` and reuse by key.
+3. **Chunk-based rendering for large worlds:** Partition the grid into spatial chunks to support frustum culling.
+4. **Object pooling where beneficial:** Recycle transient game objects, previews, and indicators.
+5. **Efficient simulation scheduling:** Decouple simulation ticks from rendering loops and throttle background processing.
+6. **Reduced unnecessary React rendering:** Prevent high-frequency game ticks from triggering unneeded React re-renders.
+7. **Adaptive graphics quality:** Support Low, Medium, and High graphics presets without degrading pixel-art identity.
+8. **Efficient cleanup of unused resources:** Safely destroy textures, listeners, and scenes on unmount.
+9. **Prevention of memory leaks:** Maintain zero unbounded data structures or detached DOM elements.
+10. **Continuous performance regression testing:** Track frame rates, heap usage, and memory in automated testing.
+
+### Empirical Profiling & Progressive Budgets
+Rather than imposing arbitrary hard memory limits up-front, Pixelopolis tracks measurable telemetry (JS heap, tab memory, GPU memory, FPS, frame-time variance, initial load time, texture count) and refines performance budgets empirically as city scale expands.
 
 ---
 
