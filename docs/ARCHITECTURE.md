@@ -329,30 +329,74 @@ export function getTileDepth(gx: number, gy: number, layerBase = 0): number {
 
 ## 6. Procedural Graphics Engine Architecture
 
-Pixelopolis does not load external sprite PNG packs. All visual assets are synthesized programmatically:
+Pixelopolis generates all visual assets programmatically via a pure, headless, deterministic procedural rasterization engine, decoupling image synthesis entirely from DOM or browser Canvas APIs.
 
+```mermaid
+flowchart TD
+    subgraph Pure_Rasterization_Pipeline ["Headless Procedural Generation Pipeline (Pure TypeScript)"]
+        direction TB
+        PRNG["Mulberry32 PRNG (Immutable Root Seed + Named Stream Forks)"]
+        Palette["Canonical 32-Color Palette (4-Step Directional Ramps)"]
+        Canvas["PixelCanvas (Headless Uint32Array 2D Raster Buffer)"]
+        IsoDraw["IsometricDrawing (Integer 2:1 Diamond Geometry & Shading)"]
+        PRNG --> Canvas
+        Palette --> Canvas
+        IsoDraw --> Canvas
+    end
+
+    subgraph Generators ["Foundational Asset Generators"]
+        direction TB
+        TerrainGen["TerrainGenerator (4 Grass Variants, Dirt, Sand, Water)"]
+        OverlayGen["OverlayGenerator (Hover Outline, Selected Reticle, Grid Marker)"]
+        StructureGen["StructureGenerator (1x1 Cottage Prototype, 64x64, Anchor 0.5, 0.75)"]
+    end
+
+    subgraph Facade_And_Registry ["Management & Upload Bridge"]
+        Facade["ProceduralGraphicsEngine Facade"]
+        Registry["TextureRegistry (Key Validation, Ownership, Cache, Disposal)"]
+        PhaserBridge["Upload Bridge (Independent CanvasTexture, Nearest-Neighbor)"]
+        Facade --> Registry
+        Registry --> PhaserBridge
+    end
+
+    Canvas --> Generators
+    Generators --> Facade
+    PhaserBridge --> PhaserTM["Phaser.Textures.TextureManager"]
 ```
-[Procedural Generator]
-        │
-        ├── 1. Generate diamond base canvas (64×32)
-        ├── 2. Apply base palette color (e.g. grass green, concrete gray, water blue)
-        ├── 3. Add directional isometric highlights (top/left brightened edges)
-        ├── 4. Add directional isometric shadows (bottom/right darkened edges)
-        ├── 5. Add micro-texture flecks/dithering using seeded PRNG
-        └── 6. Commit to Phaser.Textures.TextureManager via generateTexture()
-```
 
-### Texture Caching Strategy
-- Texture generation occurs during the `BootScene` lifecycle.
-- Textures are assigned descriptive, deterministic keys (e.g., `tile_grass_01`, `bld_house_t1_v1`).
-- Before rendering any asset, the engine queries `this.textures.exists(key)`. If cached, it reuses the existing WebGL texture without generating additional canvas allocations.
+### 6.1 Facade Responsibilities
+The `ProceduralGraphicsEngine` (`src/game/graphics/ProceduralGraphicsEngine.ts`) serves as the single unified entry point:
+- **Foundational Asset Generation:** Generates and registers all 11 core Phase 3 textures in a single call via `initializeFoundationalSet()`.
+- **Transactional Rollback:** In the event of an allocation or upload failure midway through initialization, previously uploaded textures in that transaction are cleanly rolled back via `unregister`, preventing half-initialized leaks.
+- **Idempotent Lifecycle:** Repeated calls to `initializeFoundationalSet()` check key existence and return cached keys immediately without re-allocation.
+- **Strict Ownership Boundary:** Distinguishes between textures it created and foreign textures; safe `destroy()` unregisters only its own keys.
 
-### Pixel-Art Rendering Discipline
-- Phaser configuration enforces:
-  - `pixelArt: true`
-  - `antialias: false`
-  - `roundPixels: true`
-- Image scaling uses **nearest-neighbor** interpolation to prevent blurriness on high-DPI displays.
+### 6.2 Foundational Asset Inventory
+| Asset Key | Type | Canvas Dim | Footprint / Origin | Visual Description |
+| :--- | :--- | :---: | :---: | :--- |
+| `terrain_grass_v0` | Terrain | 64×32 | 64×32, (0.5, 0.5) | Balanced meadow with standard micro-flecks |
+| `terrain_grass_v1` | Terrain | 64×32 | 64×32, (0.5, 0.5) | Lush sprouting meadow with denser sunlit clusters |
+| `terrain_grass_v2` | Terrain | 64×32 | 64×32, (0.5, 0.5) | Wild tufted meadow with paired shadow accents |
+| `terrain_grass_v3` | Terrain | 64×32 | 64×32, (0.5, 0.5) | Mellow manicured lawn with calm tonal stepping |
+| `terrain_dirt_v0` | Terrain | 64×32 | 64×32, (0.5, 0.5) | Fertile tilled dirt with organic soil crumbs |
+| `terrain_sand_v0` | Terrain | 64×32 | 64×32, (0.5, 0.5) | Coastal sand with warm wind-swept ripples |
+| `terrain_water_v0` | Terrain | 64×32 | 64×32, (0.5, 0.5) | Animated/reflective river water with stepped depth |
+| `overlay_hover_outline` | Overlay | 64×32 | 64×32, (0.5, 0.5) | Translucent green fill (~22%) with crisp 1px neon green border (~85%) |
+| `overlay_selected_reticle` | Overlay | 64×32 | 64×32, (0.5, 0.5) | Double cyan border + central 2×2 white targeting pip |
+| `overlay_grid_marker` | Overlay | 64×32 | 64×32, (0.5, 0.5) | 1px subtle cyan perimeter contour (~35% alpha) |
+| `structure_residential_lvl1`| Structure | 64×64 | Ground footprint (32, 48), origin (0.5, 0.75) | 1×1 cottage with terracotta roof, stone walls, door, window |
+
+### 6.3 Building Sprite Alignment & Anchor Convention
+Structures taller than a single 32px tile height use an expanded canvas (e.g. 64×64):
+- **Ground Diamond:** Rows 32..63 form the standard 64×32 ground diamond with center at `(32, 48)`.
+- **Vertical Relief:** Non-zero geometry extends 48 pixels upward into rows 8..31.
+- **Phaser Origin Anchor:** Set to `(0.5, 0.75)` (since $32/64 = 0.5$ and $48/64 = 0.75$).
+- **Placement Coincidence:** Placing the sprite at world coordinate `(sx, sy)` aligns its ground footprint exactly over the underlying terrain tile, while vertical geometry occludes tiles to the north-west and north-east in accordance with isometric depth sorting (`RENDER_LAYERS.BUILDINGS = 3000`).
+
+### 6.4 Scene Integration & Cleanup
+- **BootScene:** Instantiates `ProceduralGraphicsEngine(this.textures)` during `preload()` and executes `initializeFoundationalSet()`, storing the reference in `this.registry.set('graphicsEngine', engine)`.
+- **CityScene:** Tiles the 20×20 island using a deterministic spatial hash `(gx * 3 + gy * 7) % 4` across the four grass variants. Displays overlays and the structure prototype at tile `(10, 10)` with automatic resize repositioning and zero reference retention on scene shutdown.
+- **Leak-Free Destruction:** Game teardown releases WebGL textures and independent HTMLCanvasElement instances without orphaned DOM elements or memory accumulation.
 
 ---
 

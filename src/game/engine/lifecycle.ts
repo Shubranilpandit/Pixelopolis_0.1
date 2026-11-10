@@ -18,6 +18,10 @@ export function launchGame(container: HTMLElement): Phaser.Game {
   const game = new Phaser.Game(config);
   activeGameInstance = game;
 
+  if (typeof window !== 'undefined' && (import.meta as any).env?.DEV) {
+    (window as unknown as { __PIXELOPOLIS_GAME__?: Phaser.Game | null }).__PIXELOPOLIS_GAME__ = game;
+  }
+
   return game;
 }
 
@@ -35,6 +39,9 @@ export function destroyGame(game: Phaser.Game | null): void {
   }
   if (activeGameInstance === game) {
     activeGameInstance = null;
+    if (typeof window !== 'undefined' && (import.meta as any).env?.DEV) {
+      delete (window as unknown as { __PIXELOPOLIS_GAME__?: Phaser.Game | null }).__PIXELOPOLIS_GAME__;
+    }
   }
 }
 

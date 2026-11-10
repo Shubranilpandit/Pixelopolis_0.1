@@ -208,4 +208,46 @@
 - Programmatic pixel-art rendering pipeline for dynamic tile and structure textures.
 - Directional lighting model (upper-left light source, bottom-right shadows).
 - Seeded PRNG for texture micro-variations.
-- *Strict Rule: Do not begin Phase 3 without explicit user approval.*
+
+---
+
+## Phase 3 — Procedural Graphics Engine
+
+**Date:** 2026-11-09
+**Status:** Completed & Verified (Tasks 3.1 – 3.6)
+
+### Objectives Achieved
+1. **Task 3.1 — Deterministic PRNG & Canonical Color Utilities:**
+   - Mulberry32 deterministic 32-bit generator with immutable root seed, typed generators (`nextFloat`, `nextInt`, `pick`), and independent named stream forks (`fork(streamKey)`).
+   - Canonical 32-color palette with 4-step ramps (Highlight, Base, Shadow, Outline) for 7 materials + Overlay tokens.
+2. **Task 3.2 — Headless PixelCanvas & Isometric Drawing Primitives:**
+   - Pure headless 2D raster buffer (`PixelCanvas`) backed by `Uint32Array` (max dim 2048, safe clipping, copy/blend blit).
+   - Pure integer 2:1 isometric diamond geometry (`IsometricDrawing`) with perimeter outlines, facet highlights/shadows, stepped shading, and Bayer dithering.
+3. **Task 3.3 — Centralized TextureRegistry & CanvasTexture Bridge:**
+   - `TextureRegistry` with key validation, duplicate detection, foreign texture protection, and independent canvas allocation.
+   - Low-level bridge uploading `PixelCanvas` into Phaser `CanvasTexture` with nearest-neighbor filtering.
+4. **Task 3.4 — Procedural Terrain Generators:**
+   - Deterministic generators for 4 grass variants (`terrain_grass_v0`..`v3`), dirt, sand, and water.
+5. **Task 3.5 — Procedural Overlays & Foundational Structure Prototype:**
+   - Interaction overlays: `overlay_hover_outline` (green), `overlay_selected_reticle` (cyan with white pip), `overlay_grid_marker`.
+   - Foundational 1×1 cottage prototype (`structure_residential_lvl1`, 64×64, ground reference at `(32, 48)`, origin `(0.5, 0.75)`).
+6. **Task 3.6 — ProceduralGraphicsEngine Facade, Scene Integration & Visual Verification:**
+   - Created `ProceduralGraphicsEngine` high-level facade with transactional initialization, duplicate protection, and leak-free destruction.
+   - Integrated into `BootScene` (`preload()`) and `CityScene` (spatial-hash grass variant distribution across 400 tiles, overlay binding, and aligned prototype cottage on tile `(10, 10)`).
+   - Captured and verified 6 high-resolution Playwright screenshots in Chromium.
+
+### Verification & Test Results
+- **Vitest Unit Tests:** 13 test files, 172/172 tests passed (0 failures).
+- **Playwright E2E Tests:** 5 suites passed (31.2s in Chromium): `final_verification.spec.ts`, `phase2_interaction.spec.ts`, `phase3_visual_verification.spec.ts`, `smoke.spec.ts`, `texture_upload.spec.ts`.
+- **Production Build:** `npm run build` completed with zero TypeScript errors.
+- **Git Status & Checks:** `git diff --check` passed with 0 errors.
+
+---
+
+### Next Milestone
+
+**Phase 4 — Procedural Terrain and Map Generation**
+- Procedural heightmaps and biome distribution.
+- Elevation rendering and isometric slope/cliff tiles.
+- Water bodies and shore transitions.
+- *Strict Rule: Do not begin Phase 4 without explicit user approval.*

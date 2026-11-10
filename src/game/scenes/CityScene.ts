@@ -3,6 +3,15 @@ import { WORLD_CONSTANTS } from '../world/constants';
 import { gridToScreen, screenToGrid, isWithinBounds, gridToIndex } from '../world/isometric';
 import { RENDER_LAYERS, getTileDepth } from '../rendering/depth';
 import { TEXTURE_KEYS } from '../graphics/grassTileGenerator';
+import {
+  TERRAIN_TEXTURE_KEYS,
+  type TerrainTextureKey,
+} from '../graphics/generators/terrainTextureGenerator';
+import { OVERLAY_TEXTURE_KEYS } from '../graphics/generators/overlayTextureGenerator';
+import {
+  STRUCTURE_TEXTURE_KEYS,
+  STRUCTURE_DIMENSIONS,
+} from '../graphics/generators/structureTextureGenerator';
 import { CameraController } from '../camera/cameraController';
 import { eventBus } from '../events/GameEventBus';
 import { GridCoord, TileData } from '../../types/world';
@@ -19,6 +28,8 @@ export class CityScene extends Phaser.Scene {
   private selectedSprite!: Phaser.GameObjects.Sprite;
   private borderGraphics!: Phaser.GameObjects.Graphics;
   private gridGraphics!: Phaser.GameObjects.Graphics;
+  private prototypeBuildingSprite: Phaser.GameObjects.Sprite | null = null;
+  private readonly PROTOTYPE_BUILDING_COORD: GridCoord = { gx: 10, gy: 10 };
 
   // State
   private currentHoveredCoord: GridCoord | null = null;
@@ -47,6 +58,9 @@ export class CityScene extends Phaser.Scene {
 
     // 5. Create tile hover indicator & persistent selection indicator
     this.createInteractionIndicators();
+
+    // 5b. Create foundational structure prototype for visual verification
+    this.createPrototypeBuilding();
 
     // 6. Initialize camera controller centered over the map
     this.cameraController = new CameraController(this);
@@ -89,15 +103,30 @@ export class CityScene extends Phaser.Scene {
 
   /**
    * Generates 20x20 (400) isometric grass tiles rendered in back-to-front depth order.
+   * Utilizes procedural grass variants (v0..v3) with fallback to legacy grass base.
    */
   private createIsometricMap(): void {
     this.tileSprites = [];
+
+    const grassVariants: TerrainTextureKey[] = [
+      TERRAIN_TEXTURE_KEYS.GRASS_V0,
+      TERRAIN_TEXTURE_KEYS.GRASS_V1,
+      TERRAIN_TEXTURE_KEYS.GRASS_V2,
+      TERRAIN_TEXTURE_KEYS.GRASS_V3,
+    ];
 
     for (let gy = 0; gy < MAP_HEIGHT; gy++) {
       for (let gx = 0; gx < MAP_WIDTH; gx++) {
         const { sx, sy } = gridToScreen(gx, gy, this.originX, this.originY);
 
-        const tile = this.add.sprite(sx, sy, TEXTURE_KEYS.GRASS_BASE);
+        // Distribute procedural grass variants across the grid using a deterministic spatial hash
+        const variantIndex = (gx * 3 + gy * 7) % grassVariants.length;
+        const proceduralKey = grassVariants[variantIndex];
+        const textureKey = this.textures.exists(proceduralKey)
+          ? proceduralKey
+          : TEXTURE_KEYS.GRASS_BASE;
+
+        const tile = this.add.sprite(sx, sy, textureKey);
         tile.setOrigin(0.5, 0.5);
         tile.setDepth(getTileDepth(gx, gy, RENDER_LAYERS.TERRAIN_BASE));
 
@@ -168,19 +197,56 @@ export class CityScene extends Phaser.Scene {
 
   /**
    * Creates the visual hover highlight indicator and persistent selection reticle.
+   * Uses procedural overlay textures (HOVER_OUTLINE & SELECTED_RETICLE) with legacy fallback.
    */
   private createInteractionIndicators(): void {
     // Selection sprite (Cyan)
-    this.selectedSprite = this.add.sprite(0, 0, TEXTURE_KEYS.TILE_SELECTED);
+    const selKey = this.textures.exists(OVERLAY_TEXTURE_KEYS.SELECTED_RETICLE)
+      ? OVERLAY_TEXTURE_KEYS.SELECTED_RETICLE
+      : TEXTURE_KEYS.TILE_SELECTED;
+    this.selectedSprite = this.add.sprite(0, 0, selKey);
     this.selectedSprite.setOrigin(0.5, 0.5);
     this.selectedSprite.setVisible(false);
     this.selectedSprite.setDepth(RENDER_LAYERS.SELECTION_OVERLAY);
 
     // Hover sprite (Green)
-    this.hoverSprite = this.add.sprite(0, 0, TEXTURE_KEYS.TILE_HOVER);
+    const hoverKey = this.textures.exists(OVERLAY_TEXTURE_KEYS.HOVER_OUTLINE)
+      ? OVERLAY_TEXTURE_KEYS.HOVER_OUTLINE
+      : TEXTURE_KEYS.TILE_HOVER;
+    this.hoverSprite = this.add.sprite(0, 0, hoverKey);
     this.hoverSprite.setOrigin(0.5, 0.5);
     this.hoverSprite.setVisible(false);
     this.hoverSprite.setDepth(RENDER_LAYERS.HOVER_OVERLAY);
+  }
+
+  /**
+   * Renders the Phase 3 foundational 1x1 residential cottage prototype.
+   * Placed on test tile (10, 10) with exact (0.5, 0.75) anchor origin
+   * and isometric depth sorting (RENDER_LAYERS.BUILDINGS).
+   */
+  private createPrototypeBuilding(): void {
+    if (this.prototypeBuildingSprite) {
+      this.prototypeBuildingSprite.destroy();
+      this.prototypeBuildingSprite = null;
+    }
+
+    if (this.textures.exists(STRUCTURE_TEXTURE_KEYS.RESIDENTIAL_LVL1)) {
+      const { gx, gy } = this.PROTOTYPE_BUILDING_COORD;
+      const { sx, sy } = gridToScreen(gx, gy, this.originX, this.originY);
+
+      this.prototypeBuildingSprite = this.add.sprite(
+        sx,
+        sy,
+        STRUCTURE_TEXTURE_KEYS.RESIDENTIAL_LVL1
+      );
+      this.prototypeBuildingSprite.setOrigin(
+        STRUCTURE_DIMENSIONS.ORIGIN_X,
+        STRUCTURE_DIMENSIONS.ORIGIN_Y
+      );
+      this.prototypeBuildingSprite.setDepth(
+        getTileDepth(gx, gy, RENDER_LAYERS.BUILDINGS)
+      );
+    }
   }
 
   /**
@@ -351,6 +417,13 @@ export class CityScene extends Phaser.Scene {
       this.selectedSprite.setPosition(screenPos.sx, screenPos.sy);
     }
 
+    // Reposition prototype building sprite if active
+    if (this.prototypeBuildingSprite) {
+      const { gx, gy } = this.PROTOTYPE_BUILDING_COORD;
+      const { sx, sy } = gridToScreen(gx, gy, this.originX, this.originY);
+      this.prototypeBuildingSprite.setPosition(sx, sy);
+    }
+
     // Update camera center reference
     const mapCenterX = this.originX;
     const mapCenterY = this.originY + (MAP_WIDTH * HALF_TILE_HEIGHT);
@@ -364,6 +437,10 @@ export class CityScene extends Phaser.Scene {
     this.scale.off('resize', this.handleResize, this);
     if (this.cameraController) {
       this.cameraController.destroy();
+    }
+    if (this.prototypeBuildingSprite) {
+      this.prototypeBuildingSprite.destroy();
+      this.prototypeBuildingSprite = null;
     }
     for (const unsub of this.unsubscribeBusListeners) {
       unsub();

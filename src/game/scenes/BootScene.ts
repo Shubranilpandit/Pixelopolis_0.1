@@ -4,6 +4,7 @@ import {
   ensureTileHoverTexture,
   ensureTileSelectedTexture,
 } from '../graphics/grassTileGenerator';
+import { ProceduralGraphicsEngine } from '../graphics/ProceduralGraphicsEngine';
 import { eventBus } from '../events/GameEventBus';
 
 export class BootScene extends Phaser.Scene {
@@ -12,7 +13,12 @@ export class BootScene extends Phaser.Scene {
   }
 
   public preload(): void {
-    // Generate and cache procedural textures once
+    // 1. Initialize the ProceduralGraphicsEngine and register foundational assets
+    const graphicsEngine = new ProceduralGraphicsEngine(this.textures);
+    graphicsEngine.initializeFoundationalSet();
+    this.registry.set('graphicsEngine', graphicsEngine);
+
+    // 2. Retain legacy generators for fallback compatibility
     ensureGrassTileTexture(this);
     ensureTileHoverTexture(this);
     ensureTileSelectedTexture(this);
